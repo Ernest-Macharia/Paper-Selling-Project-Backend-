@@ -1,7 +1,11 @@
 from django.db.models import Count
 from rest_framework import generics, permissions
-from .serializers import PaperSerializer, CategorySerializer, CourseSerializer, SchoolSerializer
-from .models import Paper, Category, Course, School
+from .serializers import (
+    PaperSerializer, CategorySerializer,
+    CourseSerializer, SchoolSerializer, OrderSerializer,
+)
+
+from .models import Paper, Category, Course, School, Order
 
 
 class AllPapersView(generics.ListAPIView):
@@ -69,4 +73,24 @@ class PopularCoursesView(generics.ListAPIView):
 class SchoolListView(generics.ListAPIView):
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class UserOrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by('-created_at')
+
+# Retrieve a single order by id (optional)
+class OrderDetailView(generics.RetrieveAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class CreateOrderView(generics.CreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]

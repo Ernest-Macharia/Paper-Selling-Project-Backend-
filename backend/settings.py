@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-l%^d$npm!#wde82ndb&%jt_^dcki*5e6*$)7hn25rs@s=_x900
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['95bc-41-90-172-132.ngrok-free.app', '127.0.0.1', 'localhost']
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users',
     'exampapers',
+    'mpesa_api',
+    'paypal_api',
+    'stripe_api',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -68,7 +71,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'dist')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -148,5 +151,26 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ORIGIN_ALLOW_ALL = True
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+MPESA_ENVIRONMENT = 'sandbox'
+MPESA_CONSUMER_KEY = '8pKiLZ8qR3K0wNAYYyJUBvRK6KOvT5Od6mZHmdka42Tm7vYh'
+MPESA_CONSUMER_SECRET = '49X9GJd7agrHfomIiKp6LbroNt8zroLRPrKejLgSOJtJ3hm4OqTHAHQlu0VhABoq'
+MPESA_SHORTCODE = '174379'
+MPESA_PASSKEY = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+MPESA_CALLBACK_URL = 'https://ec45-41-90-172-59.ngrok-free.app/api/mpesa_api/callback/'
+
+
+PAYPAL_MODE          = 'sandbox'
+PAYPAL_CLIENT_ID     = 'Aclljz51mMGjt9kJ6QkH6Lag7bZ8iB8JxRIZ3n7H84hAcx7-iG4QxKazxDQNQ4wIR0mR0moOYDVwRUFu'
+PAYPAL_CLIENT_SECRET = 'ECw9gegfkc4ASZah6VgDhZFdsA9WfhKeEFbN8UPdQthcx8Lbddh5IOZ22_rabGPRSG-mtG5vOysxPBUJ'
+
+
+STRIPE_SECRET_KEY = 'sk_test_51RTIWaReA2jsJqbBRuVRlCb5Tt4R1OlqAS7RXuIixAxx5hUZ4sOYj90kcJRO4NqbfzwfE3iaBQFBKA7iCdm9oWSx00szvls9B8'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51RTIWaReA2jsJqbBHslgQ6ToQrGYGJevwQk0sa7vRUFkQVaRQfdJU9FReZ9qShUx3XBFw2pCe8HqbyQdXb6dDm2e00Uc12H9UJ'

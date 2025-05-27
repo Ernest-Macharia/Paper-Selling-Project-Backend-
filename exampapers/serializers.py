@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Paper, Category, Course, School
+from .models import Paper, Category, Course, School, Order
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -36,3 +36,11 @@ class PaperSerializer(serializers.ModelSerializer):
         if obj.file and hasattr(obj.file, 'url'):
             return request.build_absolute_uri(obj.file.url)
         return None
+    
+
+class OrderSerializer(serializers.ModelSerializer):
+    paper = PaperSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'paper', 'price', 'status', 'created_at']
