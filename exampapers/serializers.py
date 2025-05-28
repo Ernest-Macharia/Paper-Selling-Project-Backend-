@@ -3,16 +3,21 @@ from .models import Paper, Category, Course, School, Order
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    paper_count = serializers.IntegerField(read_only=True)
+    average_price = serializers.FloatField(read_only=True)
+    average_rating = serializers.FloatField(read_only=True)
     class Meta:
         model = Category
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'paper_count', 'average_price', 'average_rating']
 
 
 class CourseSerializer(serializers.ModelSerializer):
     paper_count = serializers.IntegerField(read_only=True)
+    average_price = serializers.FloatField(read_only=True)
+    average_rating = serializers.FloatField(read_only=True)
     class Meta:
         model = Course
-        fields = ['id', 'name', 'paper_count']
+        fields = ['id', 'name', 'paper_count', 'average_price', 'average_rating']
 
 
 class SchoolSerializer(serializers.ModelSerializer):

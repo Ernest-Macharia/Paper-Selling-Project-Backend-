@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-l%^d$npm!#wde82ndb&%jt_^dcki*5e6*$)7hn25rs@s=_x900
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['95bc-41-90-172-132.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['e04b-41-90-172-132.ngrok-free.app', '127.0.0.1', 'localhost']
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -53,6 +53,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
 }
 
 MIDDLEWARE = [

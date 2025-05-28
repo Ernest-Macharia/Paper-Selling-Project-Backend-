@@ -1,17 +1,36 @@
-from django.db.models import Count
-from rest_framework import generics, permissions
+from django.db.models import (
+    Count, Avg, Q
+)
+from rest_framework import generics, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import (
     PaperSerializer, CategorySerializer,
     CourseSerializer, SchoolSerializer, OrderSerializer,
 )
 
 from .models import Paper, Category, Course, School, Order
+from exampapers import models
+from .filters import PaperFilter
 
 
-class AllPapersView(generics.ListAPIView):
-    queryset = Paper.objects.filter(status="published")
+class PaperFilterMixin:
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'course', 'school', 'status', 'is_free']
+    search_fields = ['title', 'description', 'author__username', 'category__name', 'course__name', 'school__name']
+    ordering_fields = [
+        'title', 'upload_date', 'downloads', 'views',
+        'price', 'earnings', 'category__name', 'course__name', 'school__name'
+    ]
+    ordering = ['-upload_date']
+
+
+class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        # Only published papers, can add filtering and searching from mixin
+        return Paper.objects.filter(status="published").select_related('category', 'course', 'school')
 
 
 class UserUploadsView(generics.ListAPIView):
@@ -19,7 +38,7 @@ class UserUploadsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Paper.objects.filter(author=self.request.user)
+        return Paper.objects.filter(author=self.request.user).select_related('category', 'course', 'school')
 
 
 class UserDownloadsView(generics.ListAPIView):
@@ -27,7 +46,9 @@ class UserDownloadsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Paper.objects.filter(order__user=self.request.user).distinct()
+        return Paper.objects.filter(
+            order__user=self.request.user).distinct().select_related(
+                'category', 'course', 'school')
     
 
 class PaperDetailView(generics.RetrieveAPIView):
@@ -51,15 +72,37 @@ class PaperUploadView(generics.CreateAPIView):
 
 
 class CategoryListView(generics.ListAPIView):
-    queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return Category.objects.annotate(
+            paper_count=Count('papers', filter=Q(papers__status='published')),
+            average_price=Avg('papers__price', filter=Q(papers__status='published')),
+            average_rating=Avg('papers__reviews__rating')
+        ).order_by('-paper_count')
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'paper_count', 'average_price', 'average_rating']
+    ordering = ['-paper_count']
 
 
 class CourseListView(generics.ListAPIView):
-    queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return Course.objects.annotate(
+            paper_count=Count('papers', filter=Q(papers__status='published')),
+            average_price=Avg('papers__price', filter=Q(papers__status='published')),
+            average_rating=Avg('papers__reviews__rating')
+        ).order_by('-paper_count')
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'paper_count', 'average_price', 'average_rating']
+    ordering = ['-paper_count']
 
 
 class PopularCoursesView(generics.ListAPIView):
@@ -67,7 +110,10 @@ class PopularCoursesView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return Course.objects.annotate(paper_count=Count('paper')).order_by('-paper_count')[:10]
+        # Popular by number of published papers only
+        return Course.objects.annotate(
+            paper_count=Count('papers', filter=Q(papers__status='published'))
+        ).order_by('-paper_count')[:10]
 
 
 class SchoolListView(generics.ListAPIView):
