@@ -114,6 +114,17 @@ class PopularCoursesView(generics.ListAPIView):
         return Course.objects.annotate(
             paper_count=Count('papers', filter=Q(papers__status='published'))
         ).order_by('-paper_count')[:10]
+    
+
+class PopularCategoriesView(generics.ListAPIView):
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        # Popular by number of published papers only
+        return Category.objects.annotate(
+            paper_count=Count('papers', filter=Q(papers__status='published'))
+        ).order_by('-paper_count')[:10]
 
 
 class SchoolListView(generics.ListAPIView):
