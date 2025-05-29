@@ -3,6 +3,8 @@ from django.db import models
 from backend import settings
 from django.utils.timezone import now
 
+from users.models import User
+
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -49,6 +51,7 @@ class Paper(models.Model):
     price = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, help_text="Set price for premium papers")
     is_free = models.BooleanField(default=False, help_text="Check this if the paper is free")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="published")
+    page_count = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.title

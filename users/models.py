@@ -24,6 +24,7 @@ class User(AbstractUser):
     is_seller = models.BooleanField(default=False)
     is_buyer = models.BooleanField(default=False)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
 
     objects = CustomUserManager()
 

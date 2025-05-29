@@ -31,6 +31,10 @@ class PaperSerializer(serializers.ModelSerializer):
     course = CourseSerializer(read_only=True)
     school = SchoolSerializer(read_only=True)
     document_url = serializers.SerializerMethodField()
+    author_info = serializers.SerializerMethodField()
+    pages = serializers.SerializerMethodField()
+    total_papers_sold = serializers.SerializerMethodField()
+    review_count = serializers.IntegerField(source='reviews.count', read_only=True)
     class Meta:
         model = Paper
         fields = '__all__'
@@ -38,9 +42,23 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_document_url(self, obj):
         request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
-            return request.build_absolute_uri(obj.file.url)
-        return None
+        return request.build_absolute_uri(obj.file.url) if obj.file else None
+
+    def get_pages(self, obj):
+        # Assuming a helper method exists to count PDF pages
+        return obj.page_count if hasattr(obj, 'page_count') else None
+
+    def get_total_papers_sold(self, obj):
+        return Order.objects.filter(paper=obj).count()
+    
+    def get_author_info(self, obj):
+        user = obj.author
+        return {
+            "name": f"{user.first_name} {user.last_name}".strip(),
+            "email": user.email,
+            "avatar": self.context["request"].build_absolute_uri(user.avatar.url) if user.avatar else None,
+            "papers_sold": user.papers.filter(status="published").exclude(is_free=True).count()
+        }
     
 
 class OrderSerializer(serializers.ModelSerializer):

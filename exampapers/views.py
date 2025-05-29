@@ -9,8 +9,6 @@ from .serializers import (
 )
 
 from .models import Paper, Category, Course, School, Order
-from exampapers import models
-from .filters import PaperFilter
 
 
 class PaperFilterMixin:
