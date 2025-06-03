@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-l%^d$npm!#wde82ndb&%jt_^dcki*5e6*$)7hn25rs@s=_x900
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['e04b-41-90-172-132.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['d19e-41-90-172-100.ngrok-free.app', '127.0.0.1', 'localhost']
 
 AUTH_USER_MODEL = 'users.User'
 

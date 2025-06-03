@@ -12,7 +12,8 @@ from .views import (
     SchoolListView,
     UserOrderListView,
     OrderDetailView,
-    CreateOrderView
+    CreateOrderView,
+    DashboardStatsView
 )
 
 urlpatterns = [
@@ -29,4 +30,5 @@ urlpatterns = [
     path('papers/<int:pk>/', PaperDetailView.as_view(), name='paper-detail'),
     path('my-uploads/', UserUploadsView.as_view(), name='user-uploads'),
     path('my-downloads/', UserDownloadsView.as_view(), name='user-downloads'),
+    path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
 ]

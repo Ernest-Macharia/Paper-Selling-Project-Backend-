@@ -1,5 +1,6 @@
 # payments/views.py
 from django.conf import settings
+from django.http import HttpResponse
 import paypalrestsdk                                       # ← main SDK
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -45,9 +46,8 @@ def paypal_create(request):
             "description": "Paper purchase"
         }],
         "redirect_urls": {
-            "return_url": "c06b-197-232-89-168.ngrok-free.app/payment/success",
-            "cancel_url": "c06b-197-232-89-168.ngrok-free.app/payment/cancel"
-        }
+            "return_url": "https://d19e-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-success/",
+            "cancel_url": "https://d19e-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-cancelled/"        }
     })
 
     if not payment.create():
@@ -98,3 +98,11 @@ def paypal_capture(request):
     PayPalPayment.objects.filter(paypal_order_id=order_id).update(status="captured")
 
     return Response(payment.to_dict())
+
+
+def paypal_payment_success(request):
+    return HttpResponse("<h1>✅ Payment was successful!</h1><p>Thank you for your purchase.</p>")
+
+
+def paypal_payment_cancelled(request):
+    return HttpResponse("<h1>❌ Payment was cancelled.</h1><p>You can try again at any time.</p>")

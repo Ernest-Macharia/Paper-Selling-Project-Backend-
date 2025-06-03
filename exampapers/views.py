@@ -8,7 +8,13 @@ from .serializers import (
     CourseSerializer, SchoolSerializer, OrderSerializer,
 )
 
-from .models import Paper, Category, Course, School, Order
+from .models import Paper, Category, Course, School, Order, Review, Wishlist
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from django.utils.timezone import now
+from django.db.models import Count, Sum, Avg
+from users.models import User
 
 
 class PaperFilterMixin:
@@ -149,3 +155,59 @@ class CreateOrderView(generics.CreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]  # Only for logged-in users
+
+    def get(self, request):
+        user = request.user
+        today = now().date()
+
+        # 🌐 Global Statistics
+        total_users = User.objects.count()
+        total_papers = Paper.objects.filter(status="published").count()
+        total_downloads = Paper.objects.aggregate(total=Sum('downloads'))['total'] or 0
+        total_uploads = Paper.objects.aggregate(total=Sum('uploads'))['total'] or 0
+        total_views = Paper.objects.aggregate(total=Sum('views'))['total'] or 0
+        total_earnings = Paper.objects.aggregate(total=Sum('earnings'))['total'] or 0
+        total_orders = Order.objects.count()
+        completed_orders = Order.objects.filter(status="completed").count()
+        new_users_today = User.objects.filter(date_joined__date=today).count()
+        papers_uploaded_today = Paper.objects.filter(upload_date__date=today).count()
+
+        # 👤 User-specific Stats
+        user_papers = Paper.objects.filter(author=user)
+        user_downloads = user_papers.aggregate(total=Sum('downloads'))['total'] or 0
+        user_views = user_papers.aggregate(total=Sum('views'))['total'] or 0
+        user_earnings = user_papers.aggregate(total=Sum('earnings'))['total'] or 0
+        user_paper_count = user_papers.count()
+        user_orders = Order.objects.filter(user=user).count()
+        user_completed_orders = Order.objects.filter(user=user, status="completed").count()
+        user_reviews = Review.objects.filter(user=user).count()
+        user_wishlist_count = Wishlist.objects.filter(user=user).count()
+
+        return Response({
+            # 🌐 Platform-wide
+            "total_users": total_users,
+            "new_users_today": new_users_today,
+            "total_papers": total_papers,
+            "papers_uploaded_today": papers_uploaded_today,
+            "total_downloads": total_downloads,
+            "total_uploads": total_uploads,
+            "total_views": total_views,
+            "total_orders": total_orders,
+            "completed_orders": completed_orders,
+            "total_earnings": float(total_earnings),
+
+            # 👤 User-specific
+            "user_name": user.get_full_name() or user.username,
+            "user_papers_uploaded": user_paper_count,
+            "user_total_downloads": user_downloads,
+            "user_total_views": user_views,
+            "user_total_earnings": float(user_earnings),
+            "user_orders": user_orders,
+            "user_completed_orders": user_completed_orders,
+            "user_review_count": user_reviews,
+            "user_wishlist_count": user_wishlist_count,
+        })
