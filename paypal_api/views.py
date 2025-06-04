@@ -46,8 +46,8 @@ def paypal_create(request):
             "description": "Paper purchase"
         }],
         "redirect_urls": {
-            "return_url": "https://d19e-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-success/",
-            "cancel_url": "https://d19e-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-cancelled/"        }
+            "return_url": "https://8cff-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-success/",
+            "cancel_url": "https://8cff-41-90-172-100.ngrok-free.app/api/paypal_api/paypal-payment-cancelled/"        }
     })
 
     if not payment.create():

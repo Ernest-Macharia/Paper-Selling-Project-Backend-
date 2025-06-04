@@ -28,8 +28,8 @@ def create_stripe_session(request):
             'quantity': 1,
         }],
         mode='payment',
-        success_url='https://d19e-41-90-172-100.ngrok-free.app/api/stripe_api/stripe-payment-success/',
-        cancel_url='https://d19e-41-90-172-100.ngrok-free.app/api/stripe_api/stripe-payment-cancelled/',
+        success_url='https://8cff-41-90-172-100.ngrok-free.app/api/stripe_api/stripe-payment-success/',
+        cancel_url='https://8cff-41-90-172-100.ngrok-free.app/api/stripe_api/stripe-payment-cancelled/',
     )
 
     return JsonResponse({'id': session.id})

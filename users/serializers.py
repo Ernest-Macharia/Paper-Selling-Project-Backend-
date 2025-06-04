@@ -6,9 +6,40 @@ from django.contrib.auth.models import User
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "email", "is_seller", "is_buyer", "balance")
+        fields = (
+            "id", "first_name", "last_name", "username",
+            "email", "is_seller", "is_buyer", "balance", "avatar", "full_name"
+        )
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+    
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email"]
+        extra_kwargs = {
+            "email": {"required": True}
+        }
+
+    def update(self, instance, validated_data):
+        # Update fields
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        instance.email = validated_data.get("email", instance.email)
+
+        # Regenerate username
+        full_name = f"{instance.first_name} {instance.last_name}".strip()
+        instance.username = full_name.lower().replace(" ", "_")
+
+        instance.save()
+        return instance
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)

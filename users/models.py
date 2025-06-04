@@ -31,5 +31,11 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"  # Use email as the username field
     REQUIRED_FIELDS = []  # Remove username requirement
 
+    def save(self, *args, **kwargs):
+        # Automatically generate username from first + last name
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        self.username = full_name.lower().replace(" ", "_")  # or use `slugify(full_name)`
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.email

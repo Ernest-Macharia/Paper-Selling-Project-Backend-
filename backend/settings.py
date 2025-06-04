@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-l%^d$npm!#wde82ndb&%jt_^dcki*5e6*$)7hn25rs@s=_x900
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['d19e-41-90-172-100.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['8cff-41-90-172-100.ngrok-free.app', '127.0.0.1', 'localhost']
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -171,7 +171,7 @@ MPESA_CONSUMER_KEY = '8pKiLZ8qR3K0wNAYYyJUBvRK6KOvT5Od6mZHmdka42Tm7vYh'
 MPESA_CONSUMER_SECRET = '49X9GJd7agrHfomIiKp6LbroNt8zroLRPrKejLgSOJtJ3hm4OqTHAHQlu0VhABoq'
 MPESA_SHORTCODE = '174379'
 MPESA_PASSKEY = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
-MPESA_CALLBACK_URL = 'https://ec45-41-90-172-59.ngrok-free.app/api/mpesa_api/callback/'
+MPESA_CALLBACK_URL = 'https://8cff-41-90-172-100.ngrok-free.app/api/mpesa_api/callback/'
 
 
 PAYPAL_MODE          = 'sandbox'

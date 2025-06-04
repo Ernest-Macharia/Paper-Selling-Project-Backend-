@@ -1,9 +1,9 @@
 from rest_framework.response import Response
 from rest_framework import generics, status
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, CustomTokenObtainSerializer
+from .serializers import RegisterSerializer, CustomTokenObtainSerializer, UserSerializer, UserProfileUpdateSerializer
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -42,3 +42,26 @@ class CustomLoginView(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# List all users (optional - depends on your use case)
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+# Get current authenticated user's details
+class CurrentUserView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+    
+
+class UpdateUserDetailsView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user

@@ -35,6 +35,17 @@ class PaperSerializer(serializers.ModelSerializer):
     pages = serializers.SerializerMethodField()
     total_papers_sold = serializers.SerializerMethodField()
     review_count = serializers.IntegerField(source='reviews.count', read_only=True)
+
+    # Write-only fields to accept IDs when creating/updating
+    category_id = serializers.PrimaryKeyRelatedField(
+        source='category', queryset=Category.objects.all(), write_only=True
+    )
+    course_id = serializers.PrimaryKeyRelatedField(
+        source='course', queryset=Course.objects.all(), write_only=True
+    )
+    school_id = serializers.PrimaryKeyRelatedField(
+        source='school', queryset=School.objects.all(), write_only=True
+    )
     class Meta:
         model = Paper
         fields = '__all__'
