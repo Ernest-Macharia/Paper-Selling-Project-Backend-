@@ -78,3 +78,15 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'paper', 'price', 'status', 'created_at']
+
+
+class CheckoutInitiateSerializer(serializers.Serializer):
+    paper_id = serializers.IntegerField()
+    payment_method = serializers.ChoiceField(choices=["paypal", "credit_card", "mpesa"])
+
+    def validate_paper_id(self, value):
+        try:
+            Paper.objects.get(id=value)
+        except Paper.DoesNotExist:
+            raise serializers.ValidationError("Paper does not exist.")
+        return value

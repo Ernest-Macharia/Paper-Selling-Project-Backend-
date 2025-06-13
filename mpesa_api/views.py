@@ -25,32 +25,45 @@ def lipa_na_mpesa_direct(request):
     POST payload:
       {
         "phone_number": "2547XXXXXXXX",
-        "amount":       100.00
+        "amount": 100.00
       }
     """
-    phone  = request.data.get('phone_number')
-    amount_raw  = request.data.get('amount')
-    amount = float(amount_raw)
+    phone = request.data.get('phone_number')
+    amount_raw = request.data.get('amount')
 
-    if not phone or not amount:
+    # Validate phone number
+    if not phone:
         return Response(
-            {"detail": "phone_number and amount are required"},
+            {"detail": "phone_number is required"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # call Daraja API
-    resp = initiate_stk_push(phone, amount)
-    merchant_req_id  = resp.get('MerchantRequestID')
-    checkout_req_id  = resp.get('CheckoutRequestID')
-    response_code    = resp.get('ResponseCode')
+    # Validate amount
+    try:
+        amount = float(amount_raw)
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        amount = int(round(amount))  # Safaricom requires integer amount
+    except (TypeError, ValueError):
+        return Response(
+            {"detail": "Invalid amount. Please provide a positive numeric amount."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # record it without order
+    # Call Daraja API
+    resp = initiate_stk_push(phone, amount)
+
+    merchant_req_id = resp.get('MerchantRequestID')
+    checkout_req_id = resp.get('CheckoutRequestID')
+    response_code = resp.get('ResponseCode')
+
+    # Record the transaction without order
     MpesaPayment.objects.create(
-        amount              = amount,
-        phone_number        = phone,
-        merchant_request_id = merchant_req_id,
-        checkout_request_id = checkout_req_id,
-        status              = 'Pending' if response_code == '0' else 'Failed'
+        amount=amount,
+        phone_number=phone,
+        merchant_request_id=merchant_req_id,
+        checkout_request_id=checkout_req_id,
+        status='Pending' if response_code == '0' else 'Failed'
     )
 
     return Response(resp, status=status.HTTP_200_OK)

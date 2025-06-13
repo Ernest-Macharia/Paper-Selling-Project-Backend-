@@ -1,17 +1,20 @@
 from django.db.models import (
     Count, Avg, Q
 )
-from rest_framework import generics, permissions, filters
+from rest_framework import generics, permissions, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from .serializers import (
     PaperSerializer, CategorySerializer,
-    CourseSerializer, SchoolSerializer, OrderSerializer,
+    CourseSerializer, SchoolSerializer,
+    OrderSerializer, CheckoutInitiateSerializer
 )
 
-from .models import Paper, Category, Course, School, Order, Review, Wishlist
+from .models import (
+    Paper, Category, Course, Payment,
+    School, Order, Review, Wishlist
+)
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.utils.timezone import now
 from django.db.models import Count, Sum, Avg
 from users.models import User
@@ -211,3 +214,45 @@ class DashboardStatsView(APIView):
             "user_review_count": user_reviews,
             "user_wishlist_count": user_wishlist_count,
         })
+
+
+class CheckoutInitiateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = CheckoutInitiateSerializer(data=request.data)
+        if serializer.is_valid():
+            paper_id = serializer.validated_data["paper_id"]
+            payment_method = serializer.validated_data["payment_method"]
+            user = request.user
+
+            try:
+                paper = Paper.objects.get(id=paper_id)
+            except Paper.DoesNotExist:
+                return Response({"error": "Paper not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Create Order
+            order = Order.objects.create(
+                user=user,
+                paper=paper,
+                price=paper.price,
+                status="pending"
+            )
+
+            # Create initial Payment record (optional)
+            payment = Payment.objects.create(
+                order=order,
+                payment_method=payment_method,
+                transaction_id=f"TEMP-{order.id}",  # Placeholder, replace after real payment
+                amount=paper.price
+            )
+
+            # Return mock payment URL or instructions
+            return Response({
+                "message": "Order initiated.",
+                "order_id": order.id,
+                "payment_method": payment_method,
+                "payment_url": f"/mock-payments/{payment_method}/{order.id}/"
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

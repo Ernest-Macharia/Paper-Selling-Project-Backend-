@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l%^d$npm!#wde82ndb&%jt_^dcki*5e6*$)7hn25rs@s=_x900'
+SECRET_KEY = config('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['8cff-41-90-172-100.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=lambda v: [s.strip() for s in v.split(',')])
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.auth0_backend.Auth0JSONWebTokenAuthentication',
     ),
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -100,11 +102,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'calleb_paper_selling_db',
-        'USER': 'calleb',
-        'PASSWORD': 'bellac254',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -113,18 +115,10 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # CORS_ALLOWED_ORIGINS = [
@@ -156,28 +150,27 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ORIGIN_ALLOW_ALL = True
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOWED_ORIGINS = config('ALLOWED_ORIGIN', cast=Csv())
+CSRF_TRUSTED_ORIGINS = config('ALLOWED_ORIGIN', cast=Csv())
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-MPESA_ENVIRONMENT = 'sandbox'
-MPESA_CONSUMER_KEY = '8pKiLZ8qR3K0wNAYYyJUBvRK6KOvT5Od6mZHmdka42Tm7vYh'
-MPESA_CONSUMER_SECRET = '49X9GJd7agrHfomIiKp6LbroNt8zroLRPrKejLgSOJtJ3hm4OqTHAHQlu0VhABoq'
-MPESA_SHORTCODE = '174379'
-MPESA_PASSKEY = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
-MPESA_CALLBACK_URL = 'https://8cff-41-90-172-100.ngrok-free.app/api/mpesa_api/callback/'
+MPESA_ENVIRONMENT = config('MPESA_ENVIRONMENT')
+MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
+MPESA_SHORTCODE = config('MPESA_SHORTCODE')
+MPESA_PASSKEY = config('MPESA_PASSKEY')
+MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL')
 
+PAYPAL_MODE = config('PAYPAL_MODE')
+PAYPAL_CLIENT_ID = config('PAYPAL_CLIENT_ID')
+PAYPAL_CLIENT_SECRET = config('PAYPAL_CLIENT_SECRET')
 
-PAYPAL_MODE          = 'sandbox'
-PAYPAL_CLIENT_ID     = 'Aclljz51mMGjt9kJ6QkH6Lag7bZ8iB8JxRIZ3n7H84hAcx7-iG4QxKazxDQNQ4wIR0mR0moOYDVwRUFu'
-PAYPAL_CLIENT_SECRET = 'ECw9gegfkc4ASZah6VgDhZFdsA9WfhKeEFbN8UPdQthcx8Lbddh5IOZ22_rabGPRSG-mtG5vOysxPBUJ'
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
 
-
-STRIPE_SECRET_KEY = 'sk_test_51RTIWaReA2jsJqbBRuVRlCb5Tt4R1OlqAS7RXuIixAxx5hUZ4sOYj90kcJRO4NqbfzwfE3iaBQFBKA7iCdm9oWSx00szvls9B8'
-STRIPE_PUBLISHABLE_KEY = 'pk_test_51RTIWaReA2jsJqbBHslgQ6ToQrGYGJevwQk0sa7vRUFkQVaRQfdJU9FReZ9qShUx3XBFw2pCe8HqbyQdXb6dDm2e00Uc12H9UJ'
+AUTH0_DOMAIN = config('AUTH0_DOMAIN')
+AUTH0_API_IDENTIFIER = config('AUTH0_API_IDENTIFIER')
+AUTH0_ALGORITHMS = ['RS256']

@@ -13,7 +13,8 @@ from .views import (
     UserOrderListView,
     OrderDetailView,
     CreateOrderView,
-    DashboardStatsView
+    DashboardStatsView,
+    CheckoutInitiateView
 )
 
 urlpatterns = [
@@ -31,4 +32,5 @@ urlpatterns = [
     path('my-uploads/', UserUploadsView.as_view(), name='user-uploads'),
     path('my-downloads/', UserDownloadsView.as_view(), name='user-downloads'),
     path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path("checkout/initiate/", CheckoutInitiateView.as_view(), name="checkout-initiate"),
 ]
