@@ -1,0 +1,43 @@
+repos:
+  # Prevent committing .env files
+  - repo: local
+    hooks:
+      - id: forbid-env-files
+        name: "Forbid committing .env files"
+        entry: bash -c "echo 'Do not commit .env files!' && exit 1"
+        language: system
+        files: '\.env$'
+
+  # Python code formatting: Black
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+
+  # Sort Python imports: isort
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  # Lint Python code: flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  # Check for security issues: bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: ["-r", "."]
+
+  # Check for trailing whitespace, end-of-file errors, etc.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-merge-conflict
