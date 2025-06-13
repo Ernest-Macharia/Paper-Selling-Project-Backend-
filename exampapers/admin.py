@@ -1,9 +1,18 @@
 from django.contrib import admin
+
 from .models import (
-    Category, Course, School, Paper, 
-    Review, Order, Payment, Wishlist, 
-    Notification, Statistics
+    Category,
+    Course,
+    Notification,
+    Order,
+    Paper,
+    Payment,
+    Review,
+    School,
+    Statistics,
+    Wishlist,
 )
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -25,12 +34,29 @@ class SchoolAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     prepopulated_fields = {"slug": ("name",)}
 
+
 @admin.register(Paper)
 class PaperAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "category", "course", "price", "upload_date", "downloads", "earnings")
-    search_fields = ("title", "author__username", "author__email", "category__name", "course__name")
+    list_display = (
+        "title",
+        "author",
+        "category",
+        "course",
+        "price",
+        "upload_date",
+        "downloads",
+        "earnings",
+    )
+    search_fields = (
+        "title",
+        "author__username",
+        "author__email",
+        "category__name",
+        "course__name",
+    )
     list_filter = ("upload_date", "category", "course", "earnings")
     readonly_fields = ("downloads", "earnings")
+
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
@@ -67,6 +93,12 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(Statistics)
 class StatisticsAdmin(admin.ModelAdmin):
-    list_display = ("date", "total_papers", "total_downloads", "total_earnings", "total_users")
+    list_display = (
+        "date",
+        "total_papers",
+        "total_downloads",
+        "total_earnings",
+        "total_users",
+    )
     list_filter = ("date",)
     ordering = ["-date"]

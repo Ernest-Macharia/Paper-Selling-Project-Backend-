@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('exampapers', '0004_paper_page_count'),
+        ("exampapers", "0004_paper_page_count"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='paper',
-            name='uploads',
+            model_name="paper",
+            name="uploads",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='statistics',
-            name='total_uploads',
+            model_name="statistics",
+            name="total_uploads",
             field=models.PositiveIntegerField(default=0),
         ),
     ]

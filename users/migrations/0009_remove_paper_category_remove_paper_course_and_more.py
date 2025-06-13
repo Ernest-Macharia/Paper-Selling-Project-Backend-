@@ -7,45 +7,55 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('exampapers', '0001_initial'),
-        ('users', '0008_statistics'),
+        ("exampapers", "0001_initial"),
+        ("users", "0008_statistics"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='paper',
-            name='category',
+            model_name="paper",
+            name="category",
         ),
         migrations.RemoveField(
-            model_name='paper',
-            name='course',
+            model_name="paper",
+            name="course",
         ),
         migrations.RemoveField(
-            model_name='paper',
-            name='author',
+            model_name="paper",
+            name="author",
         ),
         migrations.AlterField(
-            model_name='review',
-            name='paper',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='exampapers.paper'),
+            model_name="review",
+            name="paper",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="reviews",
+                to="exampapers.paper",
+            ),
         ),
         migrations.AlterField(
-            model_name='wishlist',
-            name='paper',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='wishlisted_by', to='exampapers.paper'),
+            model_name="wishlist",
+            name="paper",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="wishlisted_by",
+                to="exampapers.paper",
+            ),
         ),
         migrations.AlterField(
-            model_name='order',
-            name='paper',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='exampapers.paper'),
+            model_name="order",
+            name="paper",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="exampapers.paper"
+            ),
         ),
         migrations.DeleteModel(
-            name='Category',
+            name="Category",
         ),
         migrations.DeleteModel(
-            name='Course',
+            name="Course",
         ),
         migrations.DeleteModel(
-            name='Paper',
+            name="Paper",
         ),
     ]

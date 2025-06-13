@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -18,6 +19,7 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(email, password, **extra_fields)
 
+
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
@@ -34,7 +36,9 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         # Automatically generate username from first + last name
         full_name = f"{self.first_name} {self.last_name}".strip()
-        self.username = full_name.lower().replace(" ", "_")  # or use `slugify(full_name)`
+        self.username = full_name.lower().replace(
+            " ", "_"
+        )  # or use `slugify(full_name)`
         super().save(*args, **kwargs)
 
     def __str__(self):

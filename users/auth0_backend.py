@@ -1,12 +1,15 @@
-from jose import jwt
-from jose.exceptions import JWTError, ExpiredSignatureError
 import requests
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+DEFAULT_TIMEOUT = 10
+
 
 class Auth0JSONWebTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
@@ -20,7 +23,7 @@ class Auth0JSONWebTokenAuthentication(BaseAuthentication):
         try:
             # Get JWKS
             jwks_url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
-            jwks = requests.get(jwks_url).json()
+            jwks = requests.get(jwks_url, timeout=DEFAULT_TIMEOUT).json()
             unverified_header = jwt.get_unverified_header(token)
             rsa_key = {}
 
@@ -42,7 +45,7 @@ class Auth0JSONWebTokenAuthentication(BaseAuthentication):
                 rsa_key,
                 algorithms=settings.AUTH0_ALGORITHMS,
                 audience=settings.AUTH0_API_IDENTIFIER,
-                issuer=f"https://{settings.AUTH0_DOMAIN}/"
+                issuer=f"https://{settings.AUTH0_DOMAIN}/",
             )
 
         except ExpiredSignatureError:
@@ -56,4 +59,3 @@ class Auth0JSONWebTokenAuthentication(BaseAuthentication):
 
         user, created = User.objects.get_or_create(email=email)
         return (user, None)
-

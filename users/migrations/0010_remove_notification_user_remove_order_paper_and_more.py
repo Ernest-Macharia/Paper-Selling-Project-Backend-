@@ -6,58 +6,58 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0009_remove_paper_category_remove_paper_course_and_more'),
+        ("users", "0009_remove_paper_category_remove_paper_course_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='notification',
-            name='user',
+            model_name="notification",
+            name="user",
         ),
         migrations.RemoveField(
-            model_name='order',
-            name='paper',
+            model_name="order",
+            name="paper",
         ),
         migrations.RemoveField(
-            model_name='order',
-            name='user',
+            model_name="order",
+            name="user",
         ),
         migrations.RemoveField(
-            model_name='payment',
-            name='order',
+            model_name="payment",
+            name="order",
         ),
         migrations.RemoveField(
-            model_name='review',
-            name='paper',
+            model_name="review",
+            name="paper",
         ),
         migrations.RemoveField(
-            model_name='review',
-            name='user',
+            model_name="review",
+            name="user",
         ),
         migrations.DeleteModel(
-            name='Statistics',
+            name="Statistics",
         ),
         migrations.RemoveField(
-            model_name='wishlist',
-            name='paper',
+            model_name="wishlist",
+            name="paper",
         ),
         migrations.RemoveField(
-            model_name='wishlist',
-            name='user',
+            model_name="wishlist",
+            name="user",
         ),
         migrations.DeleteModel(
-            name='Notification',
+            name="Notification",
         ),
         migrations.DeleteModel(
-            name='Order',
+            name="Order",
         ),
         migrations.DeleteModel(
-            name='Payment',
+            name="Payment",
         ),
         migrations.DeleteModel(
-            name='Review',
+            name="Review",
         ),
         migrations.DeleteModel(
-            name='Wishlist',
+            name="Wishlist",
         ),
     ]

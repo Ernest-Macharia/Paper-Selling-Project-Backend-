@@ -1,9 +1,7 @@
 from django.db import models
-
-from backend import settings
 from django.utils.timezone import now
 
-from users.models import User
+from backend import settings
 
 
 class Category(models.Model):
@@ -17,7 +15,7 @@ class Category(models.Model):
 class Course(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
-    
+
     def __str__(self):
         return self.name
 
@@ -25,9 +23,10 @@ class Course(models.Model):
 class School(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
-    
+
     def __str__(self):
         return self.name
+
 
 class Paper(models.Model):
     STATUS_CHOICES = [
@@ -37,21 +36,42 @@ class Paper(models.Model):
     ]
 
     title = models.CharField(max_length=255)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="papers")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="papers"
+    )
     description = models.TextField(blank=True)
     file = models.FileField(upload_to="papers/")
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="papers")
-    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name="papers")
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name="papers")
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="papers",
+    )
+    course = models.ForeignKey(
+        Course, on_delete=models.SET_NULL, null=True, blank=True, related_name="papers"
+    )
+    school = models.ForeignKey(
+        School, on_delete=models.SET_NULL, null=True, blank=True, related_name="papers"
+    )
     upload_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     downloads = models.PositiveIntegerField(default=0)
     uploads = models.PositiveIntegerField(default=0)
     views = models.PositiveIntegerField(default=0)
     earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    price = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, help_text="Set price for premium papers")
-    is_free = models.BooleanField(default=False, help_text="Check this if the paper is free")
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="published")
+    price = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0.00,
+        help_text="Set price for premium papers",
+    )
+    is_free = models.BooleanField(
+        default=False, help_text="Check this if the paper is free"
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="published"
+    )
     page_count = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
@@ -71,7 +91,9 @@ class Paper(models.Model):
 class Review(models.Model):
     paper = models.ForeignKey(Paper, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    rating = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])  # 1 to 5 stars
+    rating = models.IntegerField(
+        choices=[(i, str(i)) for i in range(1, 6)]
+    )  # 1 to 5 stars
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -84,7 +106,9 @@ class Order(models.Model):
         ("pending", "Pending"),
         ("completed", "Completed"),
     ]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
+    )
     paper = models.ForeignKey(Paper, on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
@@ -111,15 +135,21 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=255, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="initiated")
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="initiated"
+    )
 
     def __str__(self):
         return f"Payment {self.transaction_id}"
 
 
 class Wishlist(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wishlist")
-    paper = models.ForeignKey(Paper, on_delete=models.CASCADE, related_name="wishlisted_by")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wishlist"
+    )
+    paper = models.ForeignKey(
+        Paper, on_delete=models.CASCADE, related_name="wishlisted_by"
+    )
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -134,10 +164,11 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user}"
-    
+
 
 class Statistics(models.Model):
     """Model to track platform-wide statistics"""
+
     date = models.DateField(default=now, unique=True)
     total_papers = models.PositiveIntegerField(default=0)
     total_downloads = models.PositiveIntegerField(default=0)

@@ -7,26 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0007_notification_order_payment_review_wishlist'),
+        ("users", "0007_notification_order_payment_review_wishlist"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Statistics',
+            name="Statistics",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField(default=django.utils.timezone.now, unique=True)),
-                ('total_papers', models.PositiveIntegerField(default=0)),
-                ('total_downloads', models.PositiveIntegerField(default=0)),
-                ('total_earnings', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('total_users', models.PositiveIntegerField(default=0)),
-                ('new_users_today', models.PositiveIntegerField(default=0)),
-                ('papers_uploaded_today', models.PositiveIntegerField(default=0)),
-                ('total_orders', models.PositiveIntegerField(default=0)),
-                ('completed_orders', models.PositiveIntegerField(default=0)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "date",
+                    models.DateField(default=django.utils.timezone.now, unique=True),
+                ),
+                ("total_papers", models.PositiveIntegerField(default=0)),
+                ("total_downloads", models.PositiveIntegerField(default=0)),
+                (
+                    "total_earnings",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                ("total_users", models.PositiveIntegerField(default=0)),
+                ("new_users_today", models.PositiveIntegerField(default=0)),
+                ("papers_uploaded_today", models.PositiveIntegerField(default=0)),
+                ("total_orders", models.PositiveIntegerField(default=0)),
+                ("completed_orders", models.PositiveIntegerField(default=0)),
             ],
             options={
-                'verbose_name_plural': 'Statistics',
+                "verbose_name_plural": "Statistics",
             },
         ),
     ]

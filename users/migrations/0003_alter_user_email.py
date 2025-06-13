@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0002_alter_user_email_alter_user_is_buyer'),
+        ("users", "0002_alter_user_email_alter_user_is_buyer"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='email',
-            field=models.EmailField(blank=True, max_length=254, verbose_name='email address'),
+            model_name="user",
+            name="email",
+            field=models.EmailField(
+                blank=True, max_length=254, verbose_name="email address"
+            ),
         ),
     ]

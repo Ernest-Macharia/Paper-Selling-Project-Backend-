@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+
 from .models import User
+
 
 class CustomUserAdmin(UserAdmin):
     ordering = ["email"]  # Change from 'username' to 'email'
@@ -16,10 +18,14 @@ class CustomUserAdmin(UserAdmin):
     )
 
     add_fieldsets = (
-        (None, {
-            "classes": ("wide",),
-            "fields": ("email", "password1", "password2", "is_seller", "is_buyer"),
-        }),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("email", "password1", "password2", "is_seller", "is_buyer"),
+            },
+        ),
     )
+
 
 admin.site.register(User, CustomUserAdmin)

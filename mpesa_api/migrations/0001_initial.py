@@ -7,61 +7,87 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='MpesaCallBacks',
+            name="MpesaCallBacks",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('ip_address', models.TextField()),
-                ('caller', models.TextField()),
-                ('conversation_id', models.TextField()),
-                ('content', models.TextField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("ip_address", models.TextField()),
+                ("caller", models.TextField()),
+                ("conversation_id", models.TextField()),
+                ("content", models.TextField()),
             ],
             options={
-                'verbose_name': 'Mpesa Call Back',
-                'verbose_name_plural': 'Mpesa Call Backs',
+                "verbose_name": "Mpesa Call Back",
+                "verbose_name_plural": "Mpesa Call Backs",
             },
         ),
         migrations.CreateModel(
-            name='MpesaCalls',
+            name="MpesaCalls",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('ip_address', models.TextField()),
-                ('caller', models.TextField()),
-                ('conversation_id', models.TextField()),
-                ('content', models.TextField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("ip_address", models.TextField()),
+                ("caller", models.TextField()),
+                ("conversation_id", models.TextField()),
+                ("content", models.TextField()),
             ],
             options={
-                'verbose_name': 'Mpesa Call',
-                'verbose_name_plural': 'Mpesa Calls',
+                "verbose_name": "Mpesa Call",
+                "verbose_name_plural": "Mpesa Calls",
             },
         ),
         migrations.CreateModel(
-            name='MpesaPayment',
+            name="MpesaPayment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('description', models.TextField()),
-                ('type', models.TextField()),
-                ('reference', models.TextField()),
-                ('first_name', models.CharField(max_length=100)),
-                ('middle_name', models.CharField(max_length=100)),
-                ('last_name', models.CharField(max_length=100)),
-                ('phone_number', models.TextField()),
-                ('organization_balance', models.DecimalField(decimal_places=2, max_digits=10)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("description", models.TextField()),
+                ("type", models.TextField()),
+                ("reference", models.TextField()),
+                ("first_name", models.CharField(max_length=100)),
+                ("middle_name", models.CharField(max_length=100)),
+                ("last_name", models.CharField(max_length=100)),
+                ("phone_number", models.TextField()),
+                (
+                    "organization_balance",
+                    models.DecimalField(decimal_places=2, max_digits=10),
+                ),
             ],
             options={
-                'verbose_name': 'Mpesa Payment',
-                'verbose_name_plural': 'Mpesa Payments',
+                "verbose_name": "Mpesa Payment",
+                "verbose_name_plural": "Mpesa Payments",
             },
         ),
     ]

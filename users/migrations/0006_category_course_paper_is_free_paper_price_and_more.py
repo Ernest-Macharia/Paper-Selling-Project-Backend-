@@ -7,59 +7,102 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0005_paper'),
+        ("users", "0005_paper"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('slug', models.SlugField(unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("slug", models.SlugField(unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Course',
+            name="Course",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('slug', models.SlugField(unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("slug", models.SlugField(unique=True)),
             ],
         ),
         migrations.AddField(
-            model_name='paper',
-            name='is_free',
-            field=models.BooleanField(default=False, help_text='Check this if the paper is free'),
+            model_name="paper",
+            name="is_free",
+            field=models.BooleanField(
+                default=False, help_text="Check this if the paper is free"
+            ),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='price',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text='Set price for premium papers', max_digits=6),
+            model_name="paper",
+            name="price",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0.0,
+                help_text="Set price for premium papers",
+                max_digits=6,
+            ),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='status',
-            field=models.CharField(choices=[('draft', 'Draft'), ('published', 'Published'), ('archived', 'Archived')], default='published', max_length=10),
+            model_name="paper",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("draft", "Draft"),
+                    ("published", "Published"),
+                    ("archived", "Archived"),
+                ],
+                default="published",
+                max_length=10,
+            ),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='updated_at',
+            model_name="paper",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='views',
+            model_name="paper",
+            name="views",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='papers', to='users.category'),
+            model_name="paper",
+            name="category",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="papers",
+                to="users.category",
+            ),
         ),
         migrations.AddField(
-            model_name='paper',
-            name='course',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='papers', to='users.course'),
+            model_name="paper",
+            name="course",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="papers",
+                to="users.course",
+            ),
         ),
     ]

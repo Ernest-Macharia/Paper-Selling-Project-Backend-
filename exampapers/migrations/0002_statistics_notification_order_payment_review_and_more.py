@@ -9,79 +9,201 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('exampapers', '0001_initial'),
+        ("exampapers", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Statistics',
+            name="Statistics",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField(default=django.utils.timezone.now, unique=True)),
-                ('total_papers', models.PositiveIntegerField(default=0)),
-                ('total_downloads', models.PositiveIntegerField(default=0)),
-                ('total_earnings', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('total_users', models.PositiveIntegerField(default=0)),
-                ('new_users_today', models.PositiveIntegerField(default=0)),
-                ('papers_uploaded_today', models.PositiveIntegerField(default=0)),
-                ('total_orders', models.PositiveIntegerField(default=0)),
-                ('completed_orders', models.PositiveIntegerField(default=0)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "date",
+                    models.DateField(default=django.utils.timezone.now, unique=True),
+                ),
+                ("total_papers", models.PositiveIntegerField(default=0)),
+                ("total_downloads", models.PositiveIntegerField(default=0)),
+                (
+                    "total_earnings",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                ("total_users", models.PositiveIntegerField(default=0)),
+                ("new_users_today", models.PositiveIntegerField(default=0)),
+                ("papers_uploaded_today", models.PositiveIntegerField(default=0)),
+                ("total_orders", models.PositiveIntegerField(default=0)),
+                ("completed_orders", models.PositiveIntegerField(default=0)),
             ],
             options={
-                'verbose_name_plural': 'Statistics',
+                "verbose_name_plural": "Statistics",
             },
         ),
         migrations.CreateModel(
-            name='Notification',
+            name="Notification",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message', models.TextField()),
-                ('is_read', models.BooleanField(default=False)),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("message", models.TextField()),
+                ("is_read", models.BooleanField(default=False)),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Order',
+            name="Order",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('price', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('completed', 'Completed')], max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('paper', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='exampapers.paper')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("price", models.DecimalField(decimal_places=2, max_digits=10)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("pending", "Pending"), ("completed", "Completed")],
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="exampapers.paper",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Payment',
+            name="Payment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('payment_method', models.CharField(choices=[('paypal', 'PayPal'), ('credit_card', 'Credit Card')], max_length=50)),
-                ('transaction_id', models.CharField(max_length=255, unique=True)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('order', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='exampapers.order')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "payment_method",
+                    models.CharField(
+                        choices=[("paypal", "PayPal"), ("credit_card", "Credit Card")],
+                        max_length=50,
+                    ),
+                ),
+                ("transaction_id", models.CharField(max_length=255, unique=True)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
+                (
+                    "order",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="exampapers.order",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Review',
+            name="Review",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('rating', models.IntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')])),
-                ('comment', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('paper', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='exampapers.paper')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "rating",
+                    models.IntegerField(
+                        choices=[(1, "1"), (2, "2"), (3, "3"), (4, "4"), (5, "5")]
+                    ),
+                ),
+                ("comment", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="reviews",
+                        to="exampapers.paper",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Wishlist',
+            name="Wishlist",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('added_at', models.DateTimeField(auto_now_add=True)),
-                ('paper', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='wishlisted_by', to='exampapers.paper')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='wishlist', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("added_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "paper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="wishlisted_by",
+                        to="exampapers.paper",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="wishlist",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

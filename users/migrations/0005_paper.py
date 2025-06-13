@@ -8,21 +8,39 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0004_alter_user_managers_remove_user_username_and_more'),
+        ("users", "0004_alter_user_managers_remove_user_username_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Paper',
+            name="Paper",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True)),
-                ('file', models.FileField(upload_to='papers/')),
-                ('upload_date', models.DateTimeField(auto_now_add=True)),
-                ('downloads', models.PositiveIntegerField(default=0)),
-                ('earnings', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='papers', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True)),
+                ("file", models.FileField(upload_to="papers/")),
+                ("upload_date", models.DateTimeField(auto_now_add=True)),
+                ("downloads", models.PositiveIntegerField(default=0)),
+                (
+                    "earnings",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
+                ),
+                (
+                    "author",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="papers",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

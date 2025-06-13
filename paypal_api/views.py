@@ -1,27 +1,30 @@
 # payments/views.py
+# Optionally log config for debugging
+import logging
+
+import paypalrestsdk  # ← main SDK
 from django.conf import settings
 from django.http import HttpResponse
-import paypalrestsdk                                       # ← main SDK
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework import status
 
 from .models import PayPalPayment
+
+logger = logging.getLogger(__name__)
+logger.info("PayPal SDK configured in %s mode", settings.PAYPAL_MODE)
 
 # ──────────────────────────────────────────────────────────
 # 1)  Configure PayPal SDK once when this module is imported
 # ──────────────────────────────────────────────────────────
-paypalrestsdk.configure({
-    "mode": settings.PAYPAL_MODE,          # 'sandbox'  or 'live'
-    "client_id": settings.PAYPAL_CLIENT_ID,
-    "client_secret": settings.PAYPAL_CLIENT_SECRET,
-})
-
-# Optionally log config for debugging
-import logging
-logger = logging.getLogger(__name__)
-logger.info("PayPal SDK configured in %s mode", settings.PAYPAL_MODE)
+paypalrestsdk.configure(
+    {
+        "mode": settings.PAYPAL_MODE,  # 'sandbox'  or 'live'
+        "client_id": settings.PAYPAL_CLIENT_ID,
+        "client_secret": settings.PAYPAL_CLIENT_SECRET,
+    }
+)
 
 
 # ──────────────────────────────────────────────────────────
@@ -36,19 +39,26 @@ def paypal_create(request):
     """
     amount = request.data.get("amount")
     if amount is None:
-        return Response({"detail": "amount required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "amount required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
-    payment = paypalrestsdk.Payment({
-        "intent": "sale",                         # classic immediate capture flow
-        "payer":   {"payment_method": "paypal"},
-        "transactions": [{
-            "amount": { "total": f"{float(amount):.2f}", "currency": "USD" },
-            "description": "Paper purchase"
-        }],
-        "redirect_urls": {
-            "return_url": "https://127e-41-90-172-54.ngrok-free.app/api/paypal_api/paypal-payment-success/",
-            "cancel_url": "https://127e-41-90-172-54.ngrok-free.app/api/paypal_api/paypal-payment-cancelled/"        }
-    })
+    payment = paypalrestsdk.Payment(
+        {
+            "intent": "sale",  # classic immediate capture flow
+            "payer": {"payment_method": "paypal"},
+            "transactions": [
+                {
+                    "amount": {"total": f"{float(amount):.2f}", "currency": "USD"},
+                    "description": "Paper purchase",
+                }
+            ],
+            "redirect_urls": {
+                "return_url": settings.PAYPAL_RETURN_URL,
+                "cancel_url": settings.PAYPAL_CANCEL_URL,
+            },
+        }
+    )
 
     if not payment.create():
         logger.error("PayPal create error: %s", payment.error)
@@ -56,12 +66,13 @@ def paypal_create(request):
 
     # store minimal record
     PayPalPayment.objects.create(
-        paypal_order_id = payment.id,
-        amount          = float(amount),
-        status          = "created"
+        paypal_order_id=payment.id, amount=float(amount), status="created"
     )
 
-    approval_url = next((l.href for l in payment.links if l.rel == "approval_url"), None)
+    approval_url = next(
+        (approve.href for approve in payment.links if approve.rel == "approval_url"),
+        None,
+    )
     return Response({"orderID": payment.id, "approve_url": approval_url})
 
 
@@ -76,19 +87,25 @@ def paypal_capture(request):
     RSP   PayPal capture details
     """
     order_id = request.data.get("orderID")
-    payer_id = request.data.get("payerID")   # returned by PayPal to your front-end
+    payer_id = request.data.get("payerID")  # returned by PayPal to your front-end
 
     if not order_id or not payer_id:
-        return Response({"detail": "orderID and payerID required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "orderID and payerID required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         payment = paypalrestsdk.Payment.find(order_id)
     except paypalrestsdk.ResourceNotFound as e:
         logger.error("Payment not found: %s", e)
-        return Response({"detail": "payment not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "payment not found"}, status=status.HTTP_404_NOT_FOUND
+        )
     if not payment:
-        return Response({"detail": "payment not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "payment not found"}, status=status.HTTP_404_NOT_FOUND
+        )
 
     if not payment.execute({"payer_id": payer_id}):
         logger.error("PayPal execute error: %s", payment.error)
@@ -101,8 +118,12 @@ def paypal_capture(request):
 
 
 def paypal_payment_success(request):
-    return HttpResponse("<h1>✅ Payment was successful!</h1><p>Thank you for your purchase.</p>")
+    return HttpResponse(
+        "<h1>✅ Payment was successful!</h1><p>Thank you for your purchase.</p>"
+    )
 
 
 def paypal_payment_cancelled(request):
-    return HttpResponse("<h1>❌ Payment was cancelled.</h1><p>You can try again at any time.</p>")
+    return HttpResponse(
+        "<h1>❌ Payment was cancelled.</h1><p>You can try again at any time.</p>"
+    )

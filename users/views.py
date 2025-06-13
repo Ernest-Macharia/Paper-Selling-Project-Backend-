@@ -1,10 +1,16 @@
-from rest_framework.response import Response
-from rest_framework import generics, status
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, CustomTokenObtainSerializer, UserSerializer, UserProfileUpdateSerializer
 from django.contrib.auth import get_user_model
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .serializers import (
+    CustomTokenObtainSerializer,
+    RegisterSerializer,
+    UserProfileUpdateSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -51,6 +57,7 @@ class UserListView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
+
 # Get current authenticated user's details
 class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
@@ -58,7 +65,7 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
-    
+
 
 class UpdateUserDetailsView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileUpdateSerializer

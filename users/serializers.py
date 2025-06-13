@@ -1,8 +1,9 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
+
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
@@ -10,21 +11,27 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "id", "first_name", "last_name", "username",
-            "email", "is_seller", "is_buyer", "balance", "avatar", "full_name"
+            "id",
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "is_seller",
+            "is_buyer",
+            "balance",
+            "avatar",
+            "full_name",
         )
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
-    
+
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email"]
-        extra_kwargs = {
-            "email": {"required": True}
-        }
+        extra_kwargs = {"email": {"required": True}}
 
     def update(self, instance, validated_data):
         # Update fields
@@ -45,7 +52,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email", "password", "is_seller", "is_buyer")
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "password",
+            "is_seller",
+            "is_buyer",
+        )
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -54,7 +68,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_password(self, value):
         if len(value) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long.")
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long."
+            )
         return value
 
     def create(self, validated_data):
@@ -68,15 +84,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+
 class CustomTokenObtainSerializer(serializers.Serializer):
     email = serializers.EmailField(
         required=True,
-        error_messages={"required": "Email is required.", "invalid": "Enter a valid email address."}
+        error_messages={
+            "required": "Email is required.",
+            "invalid": "Enter a valid email address.",
+        },
     )
     password = serializers.CharField(
         write_only=True,
         required=True,
-        error_messages={"required": "Password is required."}
+        error_messages={"required": "Password is required."},
     )
 
     def validate(self, attrs):
@@ -84,15 +104,16 @@ class CustomTokenObtainSerializer(serializers.Serializer):
         password = attrs.get("password")
 
         if not email or not password:
-            raise serializers.ValidationError({
-                "email": "Email is required.",
-                "password": "Password is required."
-            })
+            raise serializers.ValidationError(
+                {"email": "Email is required.", "password": "Password is required."}
+            )
 
         user = User.objects.filter(email=email).first()
 
         if not user:
-            raise serializers.ValidationError({"email": "User with this email does not exist."})
+            raise serializers.ValidationError(
+                {"email": "User with this email does not exist."}
+            )
 
         if not user.check_password(password):
             raise serializers.ValidationError({"password": "Incorrect password."})
@@ -108,5 +129,5 @@ class CustomTokenObtainSerializer(serializers.Serializer):
                 "email": user.email,
                 "is_seller": getattr(user, "is_seller", False),
                 "is_buyer": getattr(user, "is_buyer", False),
-            }
+            },
         }

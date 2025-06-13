@@ -7,21 +7,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('exampapers', '0002_statistics_notification_order_payment_review_and_more'),
+        ("exampapers", "0002_statistics_notification_order_payment_review_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='School',
+            name="School",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('slug', models.SlugField(unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("slug", models.SlugField(unique=True)),
             ],
         ),
         migrations.AddField(
-            model_name='paper',
-            name='school',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='papers', to='exampapers.school'),
+            model_name="paper",
+            name="school",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="papers",
+                to="exampapers.school",
+            ),
         ),
     ]
