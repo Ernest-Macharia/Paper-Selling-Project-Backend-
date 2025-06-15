@@ -1,3 +1,5 @@
+# mpesa_app/views.py
+
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -5,10 +7,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import MpesaPayment
-
-# from .mpesa_credentials import LipanaMpesaPpassword, MpesaAccessToken
-from .utils import initiate_stk_push
+from mpesa_api.models import MpesaPayment
+from mpesa_api.utils import initiate_stk_push
+from payments.models import Payment
 
 
 @csrf_exempt
@@ -16,6 +17,7 @@ from .utils import initiate_stk_push
 @permission_classes([AllowAny])
 def lipa_na_mpesa_direct(request):
     """
+    Initiate Mpesa STK Push
     POST payload:
       {
         "phone_number": "2547XXXXXXXX",
@@ -43,14 +45,14 @@ def lipa_na_mpesa_direct(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Call Daraja API
+    # Call Daraja API to initiate STK push
     resp = initiate_stk_push(phone, amount)
 
     merchant_req_id = resp.get("MerchantRequestID")
     checkout_req_id = resp.get("CheckoutRequestID")
     response_code = resp.get("ResponseCode")
 
-    # Record the transaction without order
+    # Save initial MpesaPayment with status Pending or Failed
     MpesaPayment.objects.create(
         amount=amount,
         phone_number=phone,
@@ -62,40 +64,66 @@ def lipa_na_mpesa_direct(request):
     return Response(resp, status=status.HTTP_200_OK)
 
 
-@api_view(["POST"])
 @csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def mpesa_callback(request):
+    """
+    Mpesa Daraja Callback URL
+    """
     cb = request.data.get("Body", {}).get("stkCallback", {})
     checkout_id = cb.get("CheckoutRequestID")
     result_code = cb.get("ResultCode")
 
     try:
-        payment = MpesaPayment.objects.get(checkout_request_id=checkout_id)
+        payment_record = MpesaPayment.objects.get(checkout_request_id=checkout_id)
     except MpesaPayment.DoesNotExist:
         return Response(
             {"error": "Unknown CheckoutRequestID"}, status=status.HTTP_400_BAD_REQUEST
         )
 
     if result_code == 0:
+        # Payment success
         items = cb.get("CallbackMetadata", {}).get("Item", [])
         receipt = next(
             item["Value"] for item in items if item["Name"] == "MpesaReceiptNumber"
         )
-        # amt = next(item["Value"] for item in items if item["Name"] == "Amount")
+        amt = next(item["Value"] for item in items if item["Name"] == "Amount")
         ts = next(item["Value"] for item in items if item["Name"] == "TransactionDate")
+        phone = payment_record.phone_number
+        merchant_req_id = payment_record.merchant_request_id
 
-        payment.status = "Completed"
-        payment.mpesa_receipt_number = receipt
-        payment.transaction_date = parse_datetime(str(ts))
-        payment.save()
+        # Create or update unified Payment record
+        payment_obj, created = Payment.objects.update_or_create(
+            external_id=checkout_id,
+            defaults={
+                "gateway": "mpesa",
+                "amount": amt,
+                "status": "completed",
+                "currency": "KES",
+                "description": "Mpesa STK Push",
+            },
+        )
 
-        # mark order paid
-        order = payment.order
-        order.status = "completed"
-        order.save()
+        # Update MpesaPayment record
+        MpesaPayment.objects.update_or_create(
+            payment=payment_obj,
+            defaults={
+                "checkout_request_id": checkout_id,
+                "merchant_request_id": merchant_req_id,
+                "mpesa_receipt_number": receipt,
+                "phone_number": phone,
+                "transaction_date": parse_datetime(str(ts)),
+                "status": "Completed",
+            },
+        )
+
+        # ✅ If you want: update related Order model here
+
     else:
-        payment.status = "Failed"
-        payment.save()
+        # Payment failed
+        payment_record.status = "Failed"
+        payment_record.save()
 
     return Response(
         {"ResultCode": 0, "ResultDesc": "Accepted"}, status=status.HTTP_200_OK

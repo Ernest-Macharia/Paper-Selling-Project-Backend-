@@ -4,6 +4,8 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from payments.models import Payment
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -49,7 +51,17 @@ def stripe_webhook(request):
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        print(f"✅ Payment complete for session: {session['id']}")
+        Payment.objects.update_or_create(
+            external_id=session["id"],
+            defaults={
+                "gateway": "stripe",
+                "amount": session["amount_total"] / 100,
+                "status": "completed",
+                "currency": session["currency"].upper(),
+                "customer_email": session["customer_email"],
+                "description": "Stripe payment",
+            },
+        )
 
     return HttpResponse(status=200)
 
