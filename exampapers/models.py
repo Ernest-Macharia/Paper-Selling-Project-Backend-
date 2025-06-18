@@ -1,5 +1,10 @@
+import os
+from io import BytesIO
+
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.timezone import now
+from pypdf import PdfReader, PdfWriter
 
 from backend import settings
 
@@ -41,6 +46,7 @@ class Paper(models.Model):
     )
     description = models.TextField(blank=True)
     file = models.FileField(upload_to="papers/")
+    preview_file = models.FileField(upload_to="previews/", blank=True, null=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -87,6 +93,30 @@ class Paper(models.Model):
         self.views += 1
         self.save(update_fields=["views"])
 
+    def generate_preview(self):
+        if not self.file:
+            return
+
+        # Read original PDF
+        self.file.seek(0)
+        reader = PdfReader(self.file)
+        writer = PdfWriter()
+
+        # Add first 5 pages (or fewer if shorter)
+        for page in reader.pages[:5]:
+            writer.add_page(page)
+
+        # Write to memory
+        buffer = BytesIO()
+        writer.write(buffer)
+        buffer.seek(0)
+
+        # Save to preview_file
+        preview_name = (
+            os.path.splitext(os.path.basename(self.file.name))[0] + "_preview.pdf"
+        )
+        self.preview_file.save(preview_name, ContentFile(buffer.read()), save=False)
+
 
 class Review(models.Model):
     paper = models.ForeignKey(Paper, on_delete=models.CASCADE, related_name="reviews")
@@ -105,42 +135,18 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("completed", "Completed"),
+        ("failed", "Failed"),
     ]
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
     )
-    paper = models.ForeignKey(Paper, on_delete=models.CASCADE)
+    papers = models.ManyToManyField(Paper)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Order {self.id} - {self.user}"
-
-
-class Payment(models.Model):
-    PAYMENT_CHOICES = [
-        ("paypal", "PayPal"),
-        ("credit_card", "Credit Card"),
-        ("mpesa", "M-pesa"),
-    ]
-
-    STATUS_CHOICES = [
-        ("initiated", "Initiated"),
-        ("completed", "Completed"),
-        ("failed", "Failed"),
-    ]
-    order = models.OneToOneField(Order, on_delete=models.CASCADE)
-    payment_method = models.CharField(max_length=50, choices=PAYMENT_CHOICES)
-    transaction_id = models.CharField(max_length=255, unique=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="initiated"
-    )
-
-    def __str__(self):
-        return f"Payment {self.transaction_id}"
 
 
 class Wishlist(models.Model):

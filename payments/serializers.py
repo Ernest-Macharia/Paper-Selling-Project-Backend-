@@ -9,10 +9,9 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class PaymentCheckoutSerializer(serializers.Serializer):
-    provider = serializers.ChoiceField(choices=["stripe", "paypal", "mpesa"])
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
-    currency = serializers.CharField(max_length=10)
-    email = serializers.EmailField(required=False)
-    phone_number = serializers.CharField(required=False, allow_blank=True)
-    description = serializers.CharField(required=False, allow_blank=True)
+class CheckoutInitiateSerializer(serializers.Serializer):
+    paper_ids = serializers.ListField(child=serializers.IntegerField(), required=True)
+    payment_method = serializers.ChoiceField(choices=["paypal", "stripe", "mpesa"])
+    # amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    # currency = serializers.CharField(max_length=3)
+    # phone_number = serializers.CharField(required=False)

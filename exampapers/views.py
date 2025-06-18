@@ -1,16 +1,16 @@
 from django.db.models import Avg, Count, Q, Sum
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, permissions, status
+from rest_framework import filters, generics, permissions
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
 
-from .models import Category, Course, Order, Paper, Payment, Review, School, Wishlist
+from .models import Category, Course, Order, Paper, Review, School, Wishlist
 from .serializers import (
     CategorySerializer,
-    CheckoutInitiateSerializer,
     CourseSerializer,
     OrderSerializer,
     PaperSerializer,
@@ -250,45 +250,20 @@ class DashboardStatsView(APIView):
         )
 
 
-class CheckoutInitiateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class PaperDownloadView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        serializer = CheckoutInitiateSerializer(data=request.data)
-        if serializer.is_valid():
-            paper_id = serializer.validated_data["paper_id"]
-            payment_method = serializer.validated_data["payment_method"]
-            user = request.user
+    def get(self, request, pk):
+        try:
+            paper = Paper.objects.get(pk=pk)
+        except Paper.DoesNotExist:
+            return Response({"detail": "Paper not found."}, status=404)
 
-            try:
-                paper = Paper.objects.get(id=paper_id)
-            except Paper.DoesNotExist:
-                return Response(
-                    {"error": "Paper not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Create Order
-            order = Order.objects.create(
-                user=user, paper=paper, price=paper.price, status="pending"
-            )
-
-            # Create initial Payment record (optional)
-            Payment.objects.create(
-                order=order,
-                payment_method=payment_method,
-                transaction_id=f"TEMP-{order.id}",
-                amount=paper.price,
-            )
-
-            # Return mock payment URL or instructions
+        # Check if this user has bought this paper
+        if not Order.objects.filter(papers=paper, status="completed").exists():
             return Response(
-                {
-                    "message": "Order initiated.",
-                    "order_id": order.id,
-                    "payment_method": payment_method,
-                    "payment_url": f"/mock-payments/{payment_method}/{order.id}/",
-                },
-                status=status.HTTP_201_CREATED,
+                {"detail": "You have not purchased this paper."}, status=403
             )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Provide full download link
+        return Response({"file_url": request.build_absolute_uri(paper.file.url)})

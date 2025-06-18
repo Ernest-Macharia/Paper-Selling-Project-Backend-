@@ -13,7 +13,7 @@ class PayPalPayment(models.Model):
     ]
 
     payment = models.OneToOneField(
-        Payment, on_delete=models.CASCADE, related_name="paypal_payment"
+        Payment, on_delete=models.CASCADE, related_name="paypal_payment", null=True
     )
     paypal_order_id = models.CharField(max_length=100, unique=True)
     payer_id = models.CharField(max_length=100, null=True, blank=True)
@@ -22,8 +22,8 @@ class PayPalPayment(models.Model):
     capture_status = models.CharField(max_length=50, null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="created")
     created_at = models.DateTimeField(default=now)
     updated_at = models.DateTimeField(auto_now=True)
 

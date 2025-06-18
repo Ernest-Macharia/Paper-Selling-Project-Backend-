@@ -13,22 +13,25 @@ paypalrestsdk.configure(
 )
 
 
-def handle_paypal_checkout(data):
+def handle_paypal_checkout(order):
+    first_paper = order.papers.first()
+    if not first_paper:
+        raise ValueError("Order has no papers associated")
+    baseURL = settings.BASE_URL
+    url = f"{baseURL}/api/exampapers/papers/{first_paper.id}/download/"
+
     payment_obj = paypalrestsdk.Payment(
         {
             "intent": "sale",
             "payer": {"payment_method": "paypal"},
             "transactions": [
                 {
-                    "amount": {
-                        "total": f"{data['amount']:.2f}",
-                        "currency": data["currency"],
-                    },
-                    "description": data.get("description", "Order"),
+                    "amount": {"total": f"{order.price:.2f}", "currency": "USD"},
+                    "description": f"Purchase of {first_paper.title}",
                 }
             ],
             "redirect_urls": {
-                "return_url": settings.PAYPAL_SUCCESS_URL,
+                "return_url": url,
                 "cancel_url": settings.PAYPAL_CANCEL_URL,
             },
         }
@@ -41,15 +44,15 @@ def handle_paypal_checkout(data):
         (link.href for link in payment_obj.links if link.rel == "approval_url"), None
     )
 
-    # Create unified payment record
     payment = Payment.objects.create(
         gateway="paypal",
         external_id=payment_obj.id,
-        amount=data["amount"],
-        currency=data["currency"],
-        customer_email=data.get("email"),
-        description=data.get("description"),
+        amount=order.price,
+        currency="USD",
+        description=f"Purchase of {first_paper.title}",
         status="created",
+        order=order,
+        customer_email=order.user.email,
     )
 
     PayPalPayment.objects.create(payment=payment, paypal_order_id=payment_obj.id)

@@ -1,14 +1,13 @@
-from rest_framework import status, viewsets
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import permissions, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from mpesa_api.checkout import handle_mpesa_checkout
-from paypal_api.checkout import handle_paypal_checkout
-from stripe_api.checkout import handle_stripe_checkout
+from exampapers.models import Order, Paper
+from payments.services.checkout_service import handle_checkout
 
 from .models import Payment
-from .serializers import PaymentCheckoutSerializer, PaymentSerializer
+from .serializers import CheckoutInitiateSerializer, PaymentSerializer
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -17,26 +16,37 @@ class PaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def unified_checkout(request):
-    serializer = PaymentCheckoutSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class CheckoutInitiateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    data = serializer.validated_data
-    provider = data["provider"]
+    def post(self, request):
+        serializer = CheckoutInitiateSerializer(data=request.data)
+        if serializer.is_valid():
+            paper_ids = serializer.validated_data["paper_ids"]
+            payment_method = serializer.validated_data["payment_method"]
+            user = request.user
 
-    try:
-        if provider == "stripe":
-            result = handle_stripe_checkout(data)
-        elif provider == "paypal":
-            result = handle_paypal_checkout(data)
-        elif provider == "mpesa":
-            result = handle_mpesa_checkout(data)
-        else:
-            return Response({"detail": "Unsupported provider"}, status=400)
+            try:
+                papers = Paper.objects.get(id=paper_ids)
+            except Paper.DoesNotExist:
+                return Response({"error": "Paper not found"}, status=404)
 
-        return Response(result, status=200)
-    except Exception as e:
-        return Response({"detail": str(e)}, status=500)
+            order = Order.objects.create(
+                user=user, papers=papers, price=papers.price, status="pending"
+            )
+
+            try:
+                result = handle_checkout(payment_method, order)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=400)
+
+            return Response(
+                {
+                    "message": "Checkout initiated",
+                    "order_id": order.id,
+                    "checkout_info": result,
+                },
+                status=201,
+            )
+
+        return Response(serializer.errors, status=400)

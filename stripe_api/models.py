@@ -8,7 +8,7 @@ class StripePayment(models.Model):
         Payment, on_delete=models.CASCADE, related_name="stripe_payment"
     )
     session_id = models.CharField(max_length=100, unique=True)
-    payment_intent = models.CharField(max_length=100)
+    payment_intent = models.CharField(max_length=100, null=True, blank=True)
     customer_id = models.CharField(max_length=100, null=True, blank=True)
     charge_id = models.CharField(max_length=100, null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)

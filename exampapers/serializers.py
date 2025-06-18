@@ -38,6 +38,7 @@ class PaperSerializer(serializers.ModelSerializer):
     pages = serializers.SerializerMethodField()
     total_papers_sold = serializers.SerializerMethodField()
     review_count = serializers.IntegerField(source="reviews.count", read_only=True)
+    preview_url = serializers.SerializerMethodField()
 
     # Write-only fields to accept IDs when creating/updating
     category_id = serializers.PrimaryKeyRelatedField(
@@ -57,14 +58,35 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_document_url(self, obj):
         request = self.context.get("request")
-        return request.build_absolute_uri(obj.file.url) if obj.file else None
+        user = request.user
+
+        if obj.is_free:
+            return request.build_absolute_uri(obj.file.url)
+
+        if user.is_authenticated:
+            has_bought = Order.objects.filter(
+                user=user, papers=obj, status="completed"
+            ).exists()
+            if has_bought:
+                return request.build_absolute_uri(obj.file.url)
+
+        # fallback to preview
+        return None
+
+    def get_preview_url(self, obj):
+        request = self.context.get("request")
+        return (
+            request.build_absolute_uri(obj.preview_file.url)
+            if obj.preview_file
+            else None
+        )
 
     def get_pages(self, obj):
         # Assuming a helper method exists to count PDF pages
         return obj.page_count if hasattr(obj, "page_count") else None
 
     def get_total_papers_sold(self, obj):
-        return Order.objects.filter(paper=obj).count()
+        return Order.objects.filter(papers=obj).count()
 
     def get_author_info(self, obj):
         user = obj.author
@@ -83,20 +105,8 @@ class PaperSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    paper = PaperSerializer(read_only=True)
+    papers = PaperSerializer(read_only=True)
 
     class Meta:
         model = Order
-        fields = ["id", "paper", "price", "status", "created_at"]
-
-
-class CheckoutInitiateSerializer(serializers.Serializer):
-    paper_id = serializers.IntegerField()
-    payment_method = serializers.ChoiceField(choices=["paypal", "credit_card", "mpesa"])
-
-    def validate_paper_id(self, value):
-        try:
-            Paper.objects.get(id=value)
-        except Paper.DoesNotExist:
-            raise serializers.ValidationError("Paper does not exist.")
-        return value
+        fields = ["id", "papers", "price", "status", "created_at"]

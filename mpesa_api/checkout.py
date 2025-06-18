@@ -30,7 +30,7 @@ def handle_mpesa_checkout(data):
         payment=payment,
         merchant_request_id=merchant_req_id,
         checkout_request_id=checkout_req_id,
-        phone_number=phone,
+        # phone_number=phone,
     )
 
     return {"checkout_id": checkout_req_id, "response": resp}

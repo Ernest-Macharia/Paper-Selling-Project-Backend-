@@ -7,17 +7,22 @@ from stripe_api.models import StripePayment
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-def handle_stripe_checkout(data):
-    amount_cents = int(data["amount"] * 100)
+def handle_stripe_checkout(order):
+    first_paper = order.papers.first()
+    if not first_paper:
+        raise ValueError("Order has no papers associated")
+
+    amount_cents = int(order.price * 100)
+    baseURL = settings.BASE_URL
 
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[
             {
                 "price_data": {
-                    "currency": data["currency"].lower(),
+                    "currency": "usd",
                     "product_data": {
-                        "name": data.get("description", "Order"),
+                        "name": first_paper.title,
                     },
                     "unit_amount": amount_cents,
                 },
@@ -25,24 +30,29 @@ def handle_stripe_checkout(data):
             }
         ],
         mode="payment",
-        success_url=settings.STRIPE_SUCCESS_URL,
+        metadata={
+            "order_id": str(order.id),
+            "paper_id": str(first_paper.id),
+        },
+        success_url=f"{baseURL}/api/exampapers/papers/{first_paper.id}/download/",
         cancel_url=settings.STRIPE_CANCEL_URL,
-        customer_email=data.get("email", None),
     )
 
-    # Create unified payment record
     payment = Payment.objects.create(
         gateway="stripe",
         external_id=session.id,
-        amount=data["amount"],
-        currency=data["currency"],
-        customer_email=data.get("email"),
-        description=data.get("description"),
+        amount=order.price,
+        currency="USD",
+        description=f"Purchase of {first_paper.title}",
         status="created",
+        order=order,
+        customer_email=order.user.email,
     )
 
     StripePayment.objects.create(
-        payment=payment, session_id=session.id, payment_intent=session.payment_intent
+        payment=payment,
+        session_id=session.id,
+        payment_intent=session.payment_intent,
     )
 
     return {"checkout_url": session.url, "session_id": session.id}

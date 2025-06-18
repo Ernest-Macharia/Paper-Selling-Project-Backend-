@@ -9,10 +9,8 @@ class StripePaymentAdmin(admin.ModelAdmin):
         "id",
         "payment",
         "session_id",
-        "payment_intent_id",
-        "status",
+        "payment_intent",
         "created_at",
     )
-    list_filter = ("status",)
     search_fields = ("session_id", "payment_intent_id")
     ordering = ("-created_at",)

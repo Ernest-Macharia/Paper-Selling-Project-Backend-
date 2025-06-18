@@ -18,6 +18,8 @@ from decouple import Csv, config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+BASE_URL = config("BASE_URL", default="http://localhost:8000")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -166,6 +168,8 @@ CSRF_TRUSTED_ORIGINS = config("ALLOWED_ORIGIN", cast=Csv())
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+CELERY_BROKER_URL = config("CELERY_BROKER_URL")
 
 MPESA_ENVIRONMENT = config("MPESA_ENVIRONMENT")
 MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY")

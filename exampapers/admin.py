@@ -1,12 +1,13 @@
 from django.contrib import admin
 
+from exampapers.tasks import generate_paper_preview
+
 from .models import (
     Category,
     Course,
     Notification,
     Order,
     Paper,
-    Payment,
     Review,
     School,
     Statistics,
@@ -57,6 +58,10 @@ class PaperAdmin(admin.ModelAdmin):
     list_filter = ("upload_date", "category", "course", "earnings")
     readonly_fields = ("downloads", "earnings")
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        generate_paper_preview.delay(obj.id)
+
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
@@ -67,15 +72,14 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "paper", "price", "status", "created_at")
+    list_display = ("id", "user", "list_papers", "price", "status", "created_at")
     list_filter = ("status", "created_at")
-    search_fields = ("user__email", "paper__title")
+    search_fields = ("user__email", "papers__title")
 
+    def list_papers(self, obj):
+        return ", ".join([paper.title for paper in obj.papers.all()])
 
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ("transaction_id", "order", "payment_method", "amount", "timestamp")
-    search_fields = ("transaction_id", "order__user__email")
+    list_papers.short_description = "Papers"
 
 
 @admin.register(Wishlist)

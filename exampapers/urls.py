@@ -3,12 +3,12 @@ from django.urls import path
 from .views import (
     AllPapersView,
     CategoryListView,
-    CheckoutInitiateView,
     CourseListView,
     CreateOrderView,
     DashboardStatsView,
     OrderDetailView,
     PaperDetailView,
+    PaperDownloadView,
     PaperUploadView,
     PopularCategoriesView,
     PopularCoursesView,
@@ -34,10 +34,10 @@ urlpatterns = [
     path("orders/<int:pk>/", OrderDetailView.as_view(), name="order-detail"),
     path("papers/", AllPapersView.as_view(), name="all-papers"),
     path("papers/<int:pk>/", PaperDetailView.as_view(), name="paper-detail"),
+    path(
+        "papers/<int:pk>/download/", PaperDownloadView.as_view(), name="paper-download"
+    ),
     path("my-uploads/", UserUploadsView.as_view(), name="user-uploads"),
     path("my-downloads/", UserDownloadsView.as_view(), name="user-downloads"),
     path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
-    path(
-        "checkout/initiate/", CheckoutInitiateView.as_view(), name="checkout-initiate"
-    ),
 ]
