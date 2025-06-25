@@ -50,6 +50,7 @@ class PaperSerializer(serializers.ModelSerializer):
     school_id = serializers.PrimaryKeyRelatedField(
         source="school", queryset=School.objects.all(), write_only=True
     )
+    download_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Paper
@@ -87,6 +88,9 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_total_papers_sold(self, obj):
         return Order.objects.filter(papers=obj).count()
+
+    def get_download_count(self, obj):
+        return obj.paperdownload_set.count()
 
     def get_author_info(self, obj):
         user = obj.author

@@ -149,6 +149,18 @@ class Order(models.Model):
         return f"Order {self.id} - {self.user}"
 
 
+class PaperDownload(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    paper = models.ForeignKey("Paper", on_delete=models.CASCADE)
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user} downloaded {self.paper.title} on {self.downloaded_at}"
+
+
 class Wishlist(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wishlist"

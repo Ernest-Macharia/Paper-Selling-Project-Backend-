@@ -2,13 +2,23 @@ from django.db.models import Avg, Count, Q, Sum
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
 
-from .models import Category, Course, Order, Paper, Review, School, Wishlist
+from .models import (
+    Category,
+    Course,
+    Order,
+    Paper,
+    PaperDownload,
+    Review,
+    School,
+    Wishlist,
+)
 from .serializers import (
     CategorySerializer,
     CourseSerializer,
@@ -68,16 +78,41 @@ class UserUploadsView(generics.ListAPIView):
         )
 
 
-class UserDownloadsView(generics.ListAPIView):
+class UserDownloadsView(ListAPIView):
     serializer_class = PaperSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return (
-            Paper.objects.filter(order__user=self.request.user)
+            Paper.objects.filter(paperdownload__user=self.request.user)
             .distinct()
             .select_related("category", "course", "school")
         )
+
+    def list(self, request, *args, **kwargs):
+        papers = self.get_queryset()
+        serialized = self.get_serializer(
+            papers, many=True, context={"request": request}
+        )
+
+        # Get download timestamps from PaperDownload model
+        download_map = {
+            d.paper_id: d.downloaded_at
+            for d in PaperDownload.objects.filter(user=request.user, paper__in=papers)
+        }
+
+        enriched_data = []
+        for paper_data in serialized.data:
+            paper_id = paper_data["id"]
+            enriched_data.append(
+                {
+                    **paper_data,
+                    "download_date": download_map.get(paper_id),
+                    "file": paper_data.get("document_url"),
+                }
+            )
+
+        return Response(enriched_data)
 
 
 class PaperDetailView(generics.RetrieveAPIView):
@@ -259,11 +294,24 @@ class PaperDownloadView(APIView):
         except Paper.DoesNotExist:
             return Response({"detail": "Paper not found."}, status=404)
 
-        # Check if this user has bought this paper
-        if not Order.objects.filter(papers=paper, status="completed").exists():
+        # Check if user owns the paper
+        if not Order.objects.filter(
+            user=request.user, papers=paper, status="completed"
+        ).exists():
             return Response(
                 {"detail": "You have not purchased this paper."}, status=403
             )
 
-        # Provide full download link
+        # Log the download
+        PaperDownload.objects.create(
+            user=request.user, paper=paper, ip_address=self.get_client_ip(request)
+        )
+
         return Response({"file_url": request.build_absolute_uri(paper.file.url)})
+
+    def get_client_ip(self, request):
+        """Get real client IP address behind proxy (if any)"""
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0]
+        return request.META.get("REMOTE_ADDR")

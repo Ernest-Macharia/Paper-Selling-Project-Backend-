@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
 from decouple import Csv, config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -170,6 +171,12 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 CELERY_BROKER_URL = config("CELERY_BROKER_URL")
+CELERY_BEAT_SCHEDULE = {
+    "process-weekly-withdrawals": {
+        "task": "payments.services.payout_service.disburse_withdrawals",
+        "schedule": crontab(hour=6, minute=0, day_of_week=1),  # every Monday at 6:00 AM
+    },
+}
 
 MPESA_ENVIRONMENT = config("MPESA_ENVIRONMENT")
 MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY")
@@ -183,6 +190,7 @@ MPESA_STK_PUSH_URL = config("MPESA_STK_PUSH_URL")
 PAYPAL_MODE = config("PAYPAL_MODE")
 PAYPAL_CLIENT_ID = config("PAYPAL_CLIENT_ID")
 PAYPAL_CLIENT_SECRET = config("PAYPAL_CLIENT_SECRET")
+PAYPAL_WEBHOOK_ID = config("PAYPAL_WEBHOOK_ID")
 PAYPAL_REDIRECT_URL = config("PAYPAL_REDIRECT_URL")
 PAYPAL_CANCEL_URL = config("PAYPAL_CANCEL_URL")
 

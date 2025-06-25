@@ -127,6 +127,7 @@ class CustomTokenObtainSerializer(serializers.Serializer):
             "user": {
                 "id": user.id,
                 "email": user.email,
+                "first_name": user.first_name,
                 "is_seller": getattr(user, "is_seller", False),
                 "is_buyer": getattr(user, "is_buyer", False),
             },

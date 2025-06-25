@@ -1,14 +1,15 @@
-from mpesa_api.checkout import handle_mpesa_checkout
+import logging
+
 from paypal_api.checkout import handle_paypal_checkout
 from stripe_api.checkout import handle_stripe_checkout
 
+logger = logging.getLogger(__name__)
 
-def handle_checkout(payment_method, order, phone_number=None):
-    if payment_method == "mpesa":
-        return handle_mpesa_checkout(order, phone_number=phone_number)
-    elif payment_method == "paypal":
+
+def handle_checkout(provider, order):
+    if provider == "paypal":
         return handle_paypal_checkout(order)
-    elif payment_method == "stripe":
+    elif provider == "stripe":
         return handle_stripe_checkout(order)
     else:
-        raise ValueError("Unsupported payment gateway")
+        raise ValueError("Unsupported payment provider")

@@ -1,52 +1,88 @@
 from rest_framework import permissions, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from exampapers.models import Order, Paper
-from payments.services.checkout_service import handle_checkout
+from exampapers.models import Order
+from payments.serializers import WithdrawalRequestSerializer
+from payments.services.payment_verification import (
+    verify_paypal_payment,
+    verify_stripe_payment,
+)
 
-from .models import Payment
-from .serializers import CheckoutInitiateSerializer, PaymentSerializer
+from .models import Payment, WithdrawalRequest
+from .serializers import PaymentSerializer
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()
+    queryset = Payment.objects.select_related("order").prefetch_related("order__papers")
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
 
 
-class CheckoutInitiateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def verify_payment(request):
+    session_id = request.query_params.get("session_id")
+    order_id = request.query_params.get("order_id")
 
-    def post(self, request):
-        serializer = CheckoutInitiateSerializer(data=request.data)
-        if serializer.is_valid():
-            paper_ids = serializer.validated_data["paper_ids"]
-            payment_method = serializer.validated_data["payment_method"]
-            user = request.user
+    try:
+        order = Order.objects.get(id=order_id)
 
-            try:
-                papers = Paper.objects.get(id=paper_ids)
-            except Paper.DoesNotExist:
-                return Response({"error": "Paper not found"}, status=404)
-
-            order = Order.objects.create(
-                user=user, papers=papers, price=papers.price, status="pending"
-            )
-
-            try:
-                result = handle_checkout(payment_method, order)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=400)
-
+        if order.status == "completed":
             return Response(
                 {
-                    "message": "Checkout initiated",
-                    "order_id": order.id,
-                    "checkout_info": result,
-                },
-                status=201,
+                    "success": True,
+                    "order": {
+                        "id": order.id,
+                        "paper_ids": [p.id for p in order.papers.all()],
+                    },
+                }
             )
 
-        return Response(serializer.errors, status=400)
+        # Determine payment provider
+        if session_id and session_id.startswith("cs_"):  # Stripe
+            success = verify_stripe_payment(session_id, order)
+        elif session_id:  # PayPal
+            success = verify_paypal_payment(session_id, order)
+        else:
+            # Attempt to get session_id from PayPal DB model
+            from paypal_api.models import PayPalPayment
+
+            paypal_record = PayPalPayment.objects.filter(payment__order=order).first()
+            if not paypal_record:
+                return Response(
+                    {"success": False, "error": "No PayPal payment found."}, status=400
+                )
+            session_id = paypal_record.paypal_order_id
+            success = verify_paypal_payment(session_id, order)
+
+        return Response(
+            {
+                "success": success,
+                "order": (
+                    {
+                        "id": order.id,
+                        "paper_ids": [p.id for p in order.papers.all()],
+                    }
+                    if success
+                    else None
+                ),
+            }
+        )
+
+    except Order.DoesNotExist:
+        return Response({"success": False, "error": "Order not found."}, status=404)
+
+
+class WithdrawalRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = WithdrawalRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return WithdrawalRequest.objects.filter(user=self.request.user).order_by(
+            "-created_at"
+        )
+
+    def perform_create(self, serializer):
+        serializer.save()

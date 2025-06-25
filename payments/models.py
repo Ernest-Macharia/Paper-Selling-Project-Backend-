@@ -1,7 +1,9 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 from exampapers.models import Order
+from users.auth0_backend import User
 
 
 class Payment(models.Model):
@@ -57,3 +59,57 @@ class PaymentEvent(models.Model):
 
     def __str__(self):
         return f"{self.gateway} | {self.event_type} | {self.payment.id}"
+
+
+class WithdrawalRequest(models.Model):
+    PAYOUT_METHODS = (
+        ("paypal", "PayPal"),
+        ("stripe", "Stripe"),
+        ("mpesa", "M-Pesa"),
+    )
+
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("paid", "Paid"),
+        ("failed", "Failed"),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    method = models.CharField(max_length=20, choices=PAYOUT_METHODS)
+    destination = models.CharField(max_length=255, blank=True, null=True)
+    transaction_reference = models.CharField(max_length=255, blank=True, null=True)
+    data = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    admin_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    failure_reason = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.amount} ({self.status})"
+
+
+class UserPayoutProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    paypal_email = models.EmailField(blank=True, null=True)
+    stripe_account_id = models.CharField(max_length=255, blank=True, null=True)
+    mpesa_phone = models.CharField(max_length=20, blank=True, null=True)
+
+
+class OrganizationAccount(models.Model):
+    total_earnings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Org Account | Available: {self.available_balance}"
+
+
+class Wallet(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    available_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_withdrawn = models.DecimalField(max_digits=10, decimal_places=2, default=0)

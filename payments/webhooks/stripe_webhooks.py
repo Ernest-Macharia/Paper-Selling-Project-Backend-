@@ -1,5 +1,3 @@
-import json
-
 import stripe
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,31 +12,25 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @csrf_exempt
-def handle_stripe_event(request):
-    payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_ENDPOINT_SECRET
-        )
-    except Exception:
-        return HttpResponse(status=400)
-
+def handle_stripe_event(event):
+    event_type = event["type"]
     session = event["data"]["object"]
     external_id = session.get("id")
+
+    if not external_id:
+        return HttpResponse(status=400)
 
     payment = Payment.objects.filter(external_id=external_id).first()
 
     PaymentEvent.objects.create(
         payment=payment,
         gateway="stripe",
-        event_type=event["type"],
-        raw_data=json.loads(payload),
+        event_type=event_type,
+        raw_data=session,
     )
 
     if event["type"] == "checkout.session.completed" and payment:
-        update_payment_status(external_id, "completed")
+        update_payment_status(external_id, "completed", gateway="stripe")
 
         metadata = session.get("metadata", {})
         paper_id = metadata.get("paper_id")

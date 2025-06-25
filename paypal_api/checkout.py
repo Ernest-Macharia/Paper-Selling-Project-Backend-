@@ -17,9 +17,10 @@ def handle_paypal_checkout(order):
     first_paper = order.papers.first()
     if not first_paper:
         raise ValueError("Order has no papers associated")
-    baseURL = settings.BASE_URL
-    url = f"{baseURL}/api/exampapers/papers/{first_paper.id}/download/"
 
+    baseURL = settings.BASE_URL
+
+    # Create a temporary payment object to generate ID
     payment_obj = paypalrestsdk.Payment(
         {
             "intent": "sale",
@@ -31,19 +32,25 @@ def handle_paypal_checkout(order):
                 }
             ],
             "redirect_urls": {
-                "return_url": url,
+                "return_url": f"{baseURL}/payment/success",
                 "cancel_url": settings.PAYPAL_CANCEL_URL,
             },
         }
     )
 
     if not payment_obj.create():
-        raise Exception(payment_obj.error)
+        raise Exception(f"PayPal payment creation failed: {payment_obj.error}")
 
-    approval_url = next(
-        (link.href for link in payment_obj.links if link.rel == "approval_url"), None
-    )
+    approval_url = None
+    for link in payment_obj.links:
+        if link.rel == "approval_url":
+            approval_url = str(link.href)
+            break
 
+    if not approval_url:
+        raise Exception("Approval URL not found in PayPal response")
+
+    # Save to database
     payment = Payment.objects.create(
         gateway="paypal",
         external_id=payment_obj.id,
@@ -55,6 +62,13 @@ def handle_paypal_checkout(order):
         customer_email=order.user.email,
     )
 
-    PayPalPayment.objects.create(payment=payment, paypal_order_id=payment_obj.id)
+    PayPalPayment.objects.create(
+        payment=payment,
+        paypal_order_id=payment_obj.id,
+    )
 
-    return {"checkout_url": approval_url, "order_id": payment_obj.id}
+    return {
+        "checkout_url": approval_url,
+        "order_id": order.id,
+        "session_id": payment_obj.id,  # use this to verify later
+    }

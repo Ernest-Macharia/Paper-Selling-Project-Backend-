@@ -1,5 +1,6 @@
 import os
 from io import BytesIO
+from random import sample
 
 from celery import shared_task
 from django.core.files.base import ContentFile
@@ -10,7 +11,6 @@ from .models import Paper
 
 @shared_task
 def generate_paper_preview(paper_id):
-    from random import sample
 
     try:
         paper = Paper.objects.get(id=paper_id)
@@ -27,11 +27,12 @@ def generate_paper_preview(paper_id):
                 default_preview_path = os.path.join(
                     "media", "previews", "no_preview.pdf"
                 )
-                with open(default_preview_path, "rb") as default_file:
-                    content = default_file.read()
-                paper.preview_file.save(
-                    "no_preview.pdf", ContentFile(content), save=False
-                )
+                if os.path.exists(default_preview_path):
+                    with open(default_preview_path, "rb") as default_file:
+                        content = default_file.read()
+                    paper.preview_file.save(
+                        "no_preview.pdf", ContentFile(content), save=False
+                    )
                 paper.save(update_fields=["page_count", "preview_file"])
                 return
 

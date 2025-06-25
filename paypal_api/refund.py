@@ -1,5 +1,9 @@
+import logging
+
 import paypalrestsdk
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 paypalrestsdk.configure(
     {
@@ -12,26 +16,30 @@ paypalrestsdk.configure(
 
 def process_paypal_refund(payment):
     try:
-        sale = None
-        payment_obj = paypalrestsdk.Payment.find(payment.paypal_order_id)
-        if payment_obj and payment_obj.transactions:
-            related_resources = payment_obj.transactions[0].related_resources
-            sale = related_resources[0].sale.id if related_resources else None
+        payment_obj = paypalrestsdk.Payment.find(payment.external_id)
+        sale_id = (
+            payment_obj.transactions[0].related_resources[0].sale.id
+            if payment_obj.transactions
+            and payment_obj.transactions[0].related_resources
+            else None
+        )
 
-        if not sale:
+        if not sale_id:
+            logger.error("Refund failed: Sale ID not found")
             return {"status": "failed", "error": "Sale ID not found"}
 
-        refund = paypalrestsdk.Refund(
+        sale = paypalrestsdk.Sale.find(sale_id)
+        refund_response = sale.refund(
             {"amount": {"total": f"{payment.amount:.2f}", "currency": payment.currency}}
         )
 
-        sale_obj = paypalrestsdk.Sale.find(sale)
-        refund_response = sale_obj.refund(refund)
-
         if refund_response.success():
+            logger.info("Refund successful: %s", refund_response.id)
             return {"status": "success", "refund_id": refund_response.id}
         else:
+            logger.error("Refund failed: %s", refund_response.error)
             return {"status": "failed", "error": refund_response.error}
 
     except paypalrestsdk.ResourceNotFound as e:
+        logger.error("Refund exception: %s", str(e))
         return {"status": "failed", "error": str(e)}

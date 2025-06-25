@@ -4,7 +4,6 @@ import logging
 
 import paypalrestsdk
 from django.conf import settings
-from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -98,45 +97,28 @@ def paypal_capture(request):
     if not order_id or not payer_id:
         return Response(
             {"detail": "orderID and payerID required"},
-            status=status.HTTP_400_BAD_REQUEST,
+            status=400,
         )
 
     try:
-        payment = paypalrestsdk.Payment.find(order_id)
-    except paypalrestsdk.ResourceNotFound as e:
-        logger.error("Payment not found: %s", e)
-        return Response(
-            {"detail": "payment not found"}, status=status.HTTP_404_NOT_FOUND
-        )
+        payment_obj = paypalrestsdk.Payment.find(order_id)
+    except paypalrestsdk.ResourceNotFound:
+        return Response({"detail": "payment not found"}, status=404)
 
-    if not payment.execute({"payer_id": payer_id}):
-        logger.error("PayPal execute error: %s", payment.error)
-        return Response(payment.error, status=status.HTTP_400_BAD_REQUEST)
+    if not payment_obj.execute({"payer_id": payer_id}):
+        return Response(payment_obj.error, status=400)
 
     # Update unified Payment model after successful capture
     Payment.objects.update_or_create(
-        external_id=payment.id,
+        external_id=payment_obj.id,
         defaults={
             "gateway": "paypal",
-            "amount": float(payment.transactions[0].amount.total),
+            "amount": float(payment_obj.transactions[0].amount.total),
             "status": "completed",
-            "currency": payment.transactions[0].amount.currency,
+            "currency": payment_obj.transactions[0].amount.currency,
             "customer_email": payer_email,
-            "description": payment.transactions[0].description,
+            "description": payment_obj.transactions[0].description,
         },
     )
 
-    return Response(payment.to_dict())
-
-
-# Success & Cancel Views (optional)
-def paypal_payment_success(request):
-    return HttpResponse(
-        "<h1>✅ Payment was successful!</h1><p>Thank you for your purchase.</p>"
-    )
-
-
-def paypal_payment_cancelled(request):
-    return HttpResponse(
-        "<h1>❌ Payment was cancelled.</h1><p>You can try again at any time.</p>"
-    )
+    return Response(payment_obj.to_dict())

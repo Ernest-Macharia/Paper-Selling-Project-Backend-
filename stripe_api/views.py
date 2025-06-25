@@ -64,15 +64,3 @@ def stripe_webhook(request):
         )
 
     return HttpResponse(status=200)
-
-
-def stripe_payment_success(request):
-    return HttpResponse(
-        "<h1>✅ Payment was successful!</h1><p>Thank you for your purchase.</p>"
-    )
-
-
-def stripe_payment_cancelled(request):
-    return HttpResponse(
-        "<h1>❌ Payment was cancelled.</h1><p>You can try again at any time.</p>"
-    )

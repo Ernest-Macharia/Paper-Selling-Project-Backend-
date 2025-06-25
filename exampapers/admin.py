@@ -8,6 +8,7 @@ from .models import (
     Notification,
     Order,
     Paper,
+    PaperDownload,
     Review,
     School,
     Statistics,
@@ -61,6 +62,13 @@ class PaperAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         generate_paper_preview.delay(obj.id)
+
+
+@admin.register(PaperDownload)
+class PaperDownloadAdmin(admin.ModelAdmin):
+    list_display = ("user", "paper", "downloaded_at", "ip_address")
+    search_fields = ("user__username", "paper__title", "ip_address")
+    list_filter = ("downloaded_at",)
 
 
 @admin.register(Review)
