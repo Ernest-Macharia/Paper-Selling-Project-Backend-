@@ -3,7 +3,9 @@ from django.urls import path
 from .views import (
     CurrentUserView,
     CustomLoginView,
+    PasswordResetConfirmView,
     RegisterUserView,
+    RequestPasswordResetView,
     UpdateUserDetailsView,
     UserListView,
 )
@@ -17,5 +19,15 @@ urlpatterns = [
         "current-user/update/",
         UpdateUserDetailsView.as_view(),
         name="current_user_update",
+    ),
+    path(
+        "request-password-reset/",
+        RequestPasswordResetView.as_view(),
+        name="request-password-reset",
+    ),
+    path(
+        "reset-password-confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="reset-password",
     ),
 ]
