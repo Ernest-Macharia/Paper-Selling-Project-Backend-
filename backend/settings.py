@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "paypal_api",
     "stripe_api",
     "payments",
+    "communications",
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
