@@ -9,6 +9,8 @@ from payments.services.payment_verification import (
     verify_paypal_payment,
     verify_stripe_payment,
 )
+from paypal_api.models import PayPalPayment
+from stripe_api.models import StripePayment
 
 from .models import Payment, WithdrawalRequest
 from .serializers import PaymentSerializer
@@ -23,8 +25,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def verify_payment(request):
-    session_id = request.query_params.get("session_id")
+    session_id = (
+        request.query_params.get("session_id")
+        or request.query_params.get("paymentId")
+        or request.query_params.get("token")
+    )
     order_id = request.query_params.get("order_id")
+
+    if not order_id:
+        return Response({"detail": "Missing order_id."}, status=400)
+
+    if not session_id:
+        return Response({"detail": "Missing session_id."}, status=400)
 
     try:
         order = Order.objects.get(id=order_id)
@@ -40,22 +52,29 @@ def verify_payment(request):
                 }
             )
 
-        # Determine payment provider
-        if session_id and session_id.startswith("cs_"):  # Stripe
-            success = verify_stripe_payment(session_id, order)
-        elif session_id:  # PayPal
-            success = verify_paypal_payment(session_id, order)
+        if session_id:
+            if session_id.startswith("cs_"):
+                success = verify_stripe_payment(session_id, order)
+            else:
+                success = verify_paypal_payment(session_id, order)
         else:
-            # Attempt to get session_id from PayPal DB model
-            from paypal_api.models import PayPalPayment
-
-            paypal_record = PayPalPayment.objects.filter(payment__order=order).first()
-            if not paypal_record:
-                return Response(
-                    {"success": False, "error": "No PayPal payment found."}, status=400
-                )
-            session_id = paypal_record.paypal_order_id
-            success = verify_paypal_payment(session_id, order)
+            # Try to get StripePayment
+            stripe_record = StripePayment.objects.filter(payment__order=order).first()
+            if stripe_record:
+                session_id = stripe_record.session_id
+                success = verify_stripe_payment(session_id, order)
+            else:
+                # Fallback to PayPal
+                paypal_record = PayPalPayment.objects.filter(
+                    payment__order=order
+                ).first()
+                if not paypal_record:
+                    return Response(
+                        {"success": False, "error": "No payment session found."},
+                        status=400,
+                    )
+                session_id = paypal_record.paypal_order_id
+                success = verify_paypal_payment(session_id, order)
 
         return Response(
             {

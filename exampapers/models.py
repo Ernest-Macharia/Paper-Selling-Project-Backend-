@@ -121,9 +121,7 @@ class Paper(models.Model):
 class Review(models.Model):
     paper = models.ForeignKey(Paper, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    rating = models.IntegerField(
-        choices=[(i, str(i)) for i in range(1, 6)]
-    )  # 1 to 5 stars
+    rating = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)])
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

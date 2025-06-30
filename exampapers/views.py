@@ -227,7 +227,7 @@ class CreateOrderView(generics.CreateAPIView):
 
 
 class DashboardStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]  # Only for logged-in users
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
@@ -247,7 +247,7 @@ class DashboardStatsView(APIView):
 
         # 👤 User-specific Stats
         user_papers = Paper.objects.filter(author=user)
-        user_downloads = user_papers.aggregate(total=Sum("downloads"))["total"] or 0
+        user_downloaded_papers = PaperDownload.objects.filter(user=user).count()
         user_views = user_papers.aggregate(total=Sum("views"))["total"] or 0
         user_earnings = user_papers.aggregate(total=Sum("earnings"))["total"] or 0
         user_paper_count = user_papers.count()
@@ -274,7 +274,7 @@ class DashboardStatsView(APIView):
                 # 👤 User-specific
                 "user_name": user.get_full_name() or user.username,
                 "user_papers_uploaded": user_paper_count,
-                "user_total_downloads": user_downloads,
+                "user_total_downloads": user_downloaded_papers,
                 "user_total_views": user_views,
                 "user_total_earnings": float(user_earnings),
                 "user_orders": user_orders,

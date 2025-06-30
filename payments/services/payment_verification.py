@@ -1,10 +1,15 @@
 import logging
 
-import paypalrestsdk
+import requests
 import stripe
 from django.conf import settings
 
+from paypal_api.checkout import get_paypal_access_token
+from paypal_api.models import PayPalPayment
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT = 10
 
 
 def verify_stripe_payment(session_id, order):
@@ -20,30 +25,42 @@ def verify_stripe_payment(session_id, order):
     return False
 
 
-def verify_paypal_payment(payment_id, order):
-    paypalrestsdk.configure(
-        {
-            "mode": settings.PAYPAL_MODE,
-            "client_id": settings.PAYPAL_CLIENT_ID,
-            "client_secret": settings.PAYPAL_CLIENT_SECRET,
-        }
+def verify_paypal_payment(session_id, order):
+    access_token = get_paypal_access_token()
+
+    logger.info(f"[PayPal] Verifying session_id: {session_id} for order: {order.id}")
+
+    paypal_payment = PayPalPayment.objects.filter(
+        payment__order=order, paypal_order_id=session_id
+    ).first()
+
+    if not paypal_payment:
+        logger.error(
+            f"[PayPal] No PayPalPayment found for\
+            order {order.id} with session_id/token {session_id}"
+        )
+        return False
+
+    payment_id = paypal_payment.paypal_order_id
+    response = requests.get(
+        f"{settings.PAYPAL_API_BASE}/v2/checkout/orders/{payment_id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=DEFAULT_TIMEOUT,
     )
 
-    try:
-        payment = paypalrestsdk.Payment.find(payment_id)
-        logger.info(f"[PayPal] Payment {payment_id} status: {payment.state}")
+    if response.status_code != 200:
+        logger.error(f"[PayPal] Could not fetch order {payment_id}: {response.text}")
+        return False
 
-        if payment.state == "approved":
-            if order.status != "completed":
-                order.status = "completed"
-                order.save(update_fields=["status"])
-            return True
+    order_data = response.json()
+    logger.info(f"[PayPal] Order data: {order_data}")
 
-        logger.warning(f"[PayPal] Payment not approved: {payment_id}")
-        return False
-    except paypalrestsdk.ResourceNotFound:
-        logger.error(f"[PayPal] Payment not found: {payment_id}")
-        return False
-    except Exception as e:
-        logger.exception(f"[PayPal] Error verifying payment {payment_id}: {str(e)}")
-        return False
+    if order_data["status"] == "COMPLETED":
+        order.status = "completed"
+        order.save(update_fields=["status"])
+        paypal_payment.payment.status = "completed"
+        paypal_payment.payment.save(update_fields=["status"])
+        return True
+
+    logger.warning(f"[PayPal] Order {payment_id} status is not COMPLETED")
+    return False

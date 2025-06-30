@@ -44,8 +44,8 @@ def handle_stripe_checkout(order):
             },
             expand=["payment_intent"],
             idempotency_key=f"order-{order.id}",
-            success_url=f"{baseURL}/payment/success?\
-                session_id={{CHECKOUT_SESSION_ID}}&order_id={order.id}",
+            success_url=f"{baseURL}/payment/success?session_id]\
+                ={{CHECKOUT_SESSION_ID}}&order_id={order.id}",
             cancel_url=settings.STRIPE_CANCEL_URL,
         )
 
