@@ -1,6 +1,7 @@
+from django.db.models import Avg
 from rest_framework import serializers
 
-from .models import Category, Course, Order, Paper, School
+from .models import Category, Course, Order, Paper, Review, School
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -29,6 +30,30 @@ class SchoolSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
+class PaperReviewSerializer(serializers.ModelSerializer):
+    paper_title = serializers.CharField(source="paper.title", read_only=True)
+    user_name = serializers.CharField(source="user.first_name", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = [
+            "id",
+            "paper",
+            "paper_title",
+            "user_name",
+            "user",
+            "rating",
+            "comment",
+            "created_at",
+        ]
+        read_only_fields = ["paper", "user"]
+        unique_together = ["user", "paper"]
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
+
+
 class PaperSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     course = CourseSerializer(read_only=True)
@@ -37,6 +62,8 @@ class PaperSerializer(serializers.ModelSerializer):
     author_info = serializers.SerializerMethodField()
     pages = serializers.SerializerMethodField()
     total_papers_sold = serializers.SerializerMethodField()
+    reviews = PaperReviewSerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
     review_count = serializers.IntegerField(source="reviews.count", read_only=True)
     preview_url = serializers.SerializerMethodField()
 
@@ -91,6 +118,9 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_download_count(self, obj):
         return obj.paperdownload_set.count()
+
+    def get_average_rating(self, obj):
+        return obj.reviews.aggregate(avg=Avg("rating"))["avg"] or 0
 
     def get_author_info(self, obj):
         user = obj.author

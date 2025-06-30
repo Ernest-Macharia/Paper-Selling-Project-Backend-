@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 60
 
 
 def verify_paypal_signature(request):

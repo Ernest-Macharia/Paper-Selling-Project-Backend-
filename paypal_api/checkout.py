@@ -4,7 +4,7 @@ from django.conf import settings
 from payments.models import Payment
 from paypal_api.models import PayPalPayment
 
-DEFAULT_TIMEOUT = 30
+DEFAULT_TIMEOUT = 60
 
 
 def get_paypal_access_token():

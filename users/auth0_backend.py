@@ -8,7 +8,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 User = get_user_model()
 
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 60
 
 
 class Auth0JSONWebTokenAuthentication(BaseAuthentication):

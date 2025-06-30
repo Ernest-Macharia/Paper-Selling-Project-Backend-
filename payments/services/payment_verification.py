@@ -9,7 +9,7 @@ from paypal_api.models import PayPalPayment
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 60
 
 
 def verify_stripe_payment(session_id, order):

@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 from django.conf import settings
 
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 60
 
 
 def get_mpesa_access_token():

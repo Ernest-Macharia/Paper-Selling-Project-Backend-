@@ -1,4 +1,5 @@
 from django.db.models import Avg, Count, Q, Sum
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions
@@ -23,6 +24,7 @@ from .serializers import (
     CategorySerializer,
     CourseSerializer,
     OrderSerializer,
+    PaperReviewSerializer,
     PaperSerializer,
     SchoolSerializer,
 )
@@ -302,7 +304,6 @@ class PaperDownloadView(APIView):
                 {"detail": "You have not purchased this paper."}, status=403
             )
 
-        # Log the download
         PaperDownload.objects.create(
             user=request.user, paper=paper, ip_address=self.get_client_ip(request)
         )
@@ -315,3 +316,32 @@ class PaperDownloadView(APIView):
         if x_forwarded_for:
             return x_forwarded_for.split(",")[0]
         return request.META.get("REMOTE_ADDR")
+
+
+class PaperReviewCreateAPIView(generics.CreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = PaperReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        paper_id = self.kwargs.get("pk")
+        paper = get_object_or_404(Paper, pk=paper_id)
+        serializer.save(user=self.request.user, paper=paper)
+
+
+class GivenReviewsListAPIView(generics.ListAPIView):
+    serializer_class = PaperReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Review.objects.filter(user=self.request.user).order_by("-created_at")
+
+
+class ReceivedReviewsListAPIView(generics.ListAPIView):
+    serializer_class = PaperReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Review.objects.filter(paper__author=self.request.user).order_by(
+            "-created_at"
+        )
