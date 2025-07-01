@@ -22,9 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 BASE_URL = config("BASE_URL", default="http://localhost:8000")
 
+EMAIL_BACKEND = config("EMAIL_BACKEND")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
-
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
