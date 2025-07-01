@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 BASE_URL = config("BASE_URL", default="http://localhost:8000")
 
-EMAIL_BACKEND = config("EMAIL_BACKEND")
+# EMAIL_BACKEND = config("EMAIL_BACKEND")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
 
 # Quick-start development settings - unsuitable for production
