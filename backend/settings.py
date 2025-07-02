@@ -147,11 +147,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",# Vue frontend
-#     #"https://your-production-domain.com",  # Add production domain when deploying
-# ]
+CORS_ALLOWED_ORIGINS = config(
+    "ALLOWED_ORIGIN",
+    cast=lambda v: [s.strip() for s in v.split(",")],
+)
 
 
 # Internationalization
