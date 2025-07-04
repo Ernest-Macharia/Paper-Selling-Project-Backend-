@@ -3,7 +3,6 @@ from django.db import models
 from django.utils import timezone
 
 from exampapers.models import Order
-from users.auth0_backend import User
 
 
 class Payment(models.Model):
@@ -109,7 +108,8 @@ class OrganizationAccount(models.Model):
 
 
 class Wallet(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField("users.User", on_delete=models.CASCADE)
     available_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_withdrawn = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    last_withdrawal_at = models.DateTimeField(null=True, blank=True)

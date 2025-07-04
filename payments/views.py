@@ -1,7 +1,8 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from exampapers.models import Order
 from payments.serializers import WithdrawalRequestSerializer
@@ -13,7 +14,7 @@ from paypal_api.models import PayPalPayment
 from stripe_api.models import StripePayment
 
 from .models import Payment, WithdrawalRequest
-from .serializers import PaymentSerializer
+from .serializers import PaymentSerializer, WalletSummarySerializer
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -104,4 +105,26 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save()
+        user = self.request.user
+        amount = serializer.validated_data["amount"]
+
+        if amount < 10:
+            raise serializers.ValidationError("Minimum withdrawal amount is $10")
+
+        if amount > user.wallet.balance:
+            raise serializers.ValidationError("Insufficient balance.")
+
+        # Deduct balance from wallet
+        user.wallet.balance -= amount
+        user.wallet.save()
+
+        serializer.save(user=user)
+
+
+class WalletSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        wallet = request.user.wallet
+        serializer = WalletSummarySerializer(wallet)
+        return Response(serializer.data)

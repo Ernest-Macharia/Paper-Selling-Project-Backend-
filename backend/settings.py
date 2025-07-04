@@ -15,7 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from celery.schedules import crontab
-from decouple import Csv, config
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +41,9 @@ ALLOWED_HOSTS = config(
 )
 
 AUTH_USER_MODEL = "users.User"
+
+TIME_ZONE = "Africa/Nairobi"
+USE_TZ = True
 
 
 # Application definition
@@ -147,11 +150,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-CORS_ALLOWED_ORIGINS = config(
-    "ALLOWED_ORIGIN",
-    cast=lambda v: [s.strip() for s in v.split(",")],
-)
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -177,18 +175,30 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ALLOWED_ORIGINS = config("ALLOWED_ORIGIN", cast=Csv())
-CSRF_TRUSTED_ORIGINS = config("ALLOWED_ORIGIN", cast=Csv())
+CORS_ALLOWED_ORIGINS = [
+    "https://gradesworld.com",
+    "https://www.gradesworld.com",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 CELERY_BROKER_URL = config("CELERY_BROKER_URL")
+# CELERY_BEAT_SCHEDULE = {
+#     "process-weekly-withdrawals": {
+#         "task": "payments.services.payout_service.disburse_withdrawals",
+#         "schedule": crontab(hour=6, minute=0, day_of_week=1),  # every Monday at 6:00 AM
+#     },
+# }
+
 CELERY_BEAT_SCHEDULE = {
-    "process-weekly-withdrawals": {
-        "task": "payments.services.payout_service.disburse_withdrawals",
-        "schedule": crontab(hour=6, minute=0, day_of_week=1),  # every Monday at 6:00 AM
+    "run-weekly-withdrawals": {
+        "task": "payments.signals.batch_process_withdrawals",
+        "schedule": crontab(
+            minute=5, hour=0, day_of_week="sun"
+        ),  # every hour on Sunday
     },
 }
 

@@ -13,11 +13,15 @@ from payments.webhooks.stripe_webhooks import handle_stripe_event
 
 @csrf_exempt
 def stripe_webhook(request):
-    payload = json.loads(request.body)
+    payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_ENDPOINT_SECRET
+            payload=payload,
+            sig_header=sig_header,
+            secret=endpoint_secret,
         )
         handle_stripe_event(event)
         return HttpResponse(status=200)

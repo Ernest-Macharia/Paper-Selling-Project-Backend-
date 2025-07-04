@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Payment, WithdrawalRequest
+from .models import Payment, Wallet, WithdrawalRequest
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -41,4 +41,25 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context["request"].user
+        wallet = user.wallet
+
+        if wallet.available_balance < validated_data["amount"]:
+            raise serializers.ValidationError("Insufficient wallet balance.")
+
+        # Deduct balance
+        wallet.available_balance -= validated_data["amount"]
+        wallet.total_withdrawn += validated_data["amount"]
+        wallet.save()
+
         return WithdrawalRequest.objects.create(user=user, **validated_data)
+
+
+class WalletSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wallet
+        fields = [
+            "available_balance",
+            "total_earned",
+            "total_withdrawn",
+            "last_updated",
+        ]

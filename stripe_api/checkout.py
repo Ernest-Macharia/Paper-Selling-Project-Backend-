@@ -44,8 +44,7 @@ def handle_stripe_checkout(order):
             },
             expand=["payment_intent"],
             idempotency_key=f"order-{order.id}",
-            success_url=f"{baseURL}/payment/\
-                success?session_id={{CHECKOUT_SESSION_ID}}&order_id={order.id}",
+            success_url=f"{baseURL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}&order_id={order.id}",
             cancel_url=f"{baseURL}/payment/cancel?order_id={order.id}",
         )
 
@@ -61,7 +60,7 @@ def handle_stripe_checkout(order):
             customer_email=order.user.email,
         )
 
-        # Store Stripe-specific metadata
+        # Store Stripe-specific info
         StripePayment.objects.create(
             payment=payment,
             session_id=session.id,

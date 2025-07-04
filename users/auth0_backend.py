@@ -1,18 +1,19 @@
 import requests
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-
-User = get_user_model()
 
 DEFAULT_TIMEOUT = 60
 
 
 class Auth0JSONWebTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
         auth_header = request.headers.get("Authorization")
 
         if not auth_header or not auth_header.startswith("Bearer "):

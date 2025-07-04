@@ -33,9 +33,7 @@ class CheckoutInitiateView(APIView):
             paper_ids = serializer.validated_data["paper_ids"]
             payment_method = serializer.validated_data["payment_method"]
 
-            # user = User.objects.first()
-            user = request.user  # Use the authenticated user
-
+            user = request.user
             total_price = 0
             papers = []
             for pid in paper_ids:

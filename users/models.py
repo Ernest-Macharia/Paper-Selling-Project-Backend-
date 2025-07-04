@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+from payments.models import Wallet
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -34,12 +36,13 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []  # Remove username requirement
 
     def save(self, *args, **kwargs):
-        # Automatically generate username from first + last name
+        created = self.pk is None
+
         full_name = f"{self.first_name} {self.last_name}".strip()
-        self.username = full_name.lower().replace(
-            " ", "_"
-        )  # or use `slugify(full_name)`
+        self.username = full_name.lower().replace(" ", "_")
+
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return self.email
+        # Create wallet only after user is saved for the first time
+        if created:
+            Wallet.objects.get_or_create(user=self)

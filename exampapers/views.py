@@ -236,12 +236,13 @@ class DashboardStatsView(APIView):
         today = now().date()
 
         # 🌐 Global Statistics
+        papers_qs = Paper.objects.filter(status="published")
         total_users = User.objects.count()
-        total_papers = Paper.objects.filter(status="published").count()
-        total_downloads = Paper.objects.aggregate(total=Sum("downloads"))["total"] or 0
-        total_uploads = Paper.objects.aggregate(total=Sum("uploads"))["total"] or 0
-        total_views = Paper.objects.aggregate(total=Sum("views"))["total"] or 0
-        total_earnings = Paper.objects.aggregate(total=Sum("earnings"))["total"] or 0
+        total_papers = papers_qs.count()
+        total_downloads = papers_qs.aggregate(total=Sum("downloads"))["total"] or 0
+        total_uploads = papers_qs.aggregate(total=Sum("uploads"))["total"] or 0
+        total_views = papers_qs.aggregate(total=Sum("views"))["total"] or 0
+        total_earnings = papers_qs.aggregate(total=Sum("earnings"))["total"] or 0
         total_orders = Order.objects.count()
         completed_orders = Order.objects.filter(status="completed").count()
         new_users_today = User.objects.filter(date_joined__date=today).count()
@@ -252,11 +253,7 @@ class DashboardStatsView(APIView):
         user_downloaded_papers = PaperDownload.objects.filter(user=user).count()
         user_views = user_papers.aggregate(total=Sum("views"))["total"] or 0
         user_earnings = user_papers.aggregate(total=Sum("earnings"))["total"] or 0
-        user_paper_count = user_papers.count()
-        user_orders = Order.objects.filter(user=user).count()
-        user_completed_orders = Order.objects.filter(
-            user=user, status="completed"
-        ).count()
+        user_orders = Order.objects.filter(user=user)
         user_reviews = Review.objects.filter(user=user).count()
         user_wishlist_count = Wishlist.objects.filter(user=user).count()
 
@@ -275,12 +272,12 @@ class DashboardStatsView(APIView):
                 "total_earnings": float(total_earnings),
                 # 👤 User-specific
                 "user_name": user.get_full_name() or user.username,
-                "user_papers_uploaded": user_paper_count,
+                "user_papers_uploaded": user_papers.count(),
                 "user_total_downloads": user_downloaded_papers,
                 "user_total_views": user_views,
                 "user_total_earnings": float(user_earnings),
-                "user_orders": user_orders,
-                "user_completed_orders": user_completed_orders,
+                "user_orders": user_orders.count(),
+                "user_completed_orders": user_orders.filter(status="completed").count(),
                 "user_review_count": user_reviews,
                 "user_wishlist_count": user_wishlist_count,
             }

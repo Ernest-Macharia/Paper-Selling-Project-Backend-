@@ -7,7 +7,13 @@ from django.utils.timezone import now
 from payments.services.payout_service import disburse_withdrawal
 from payments.services.refund_service import process_refund
 
-from .models import Payment, PaymentEvent, WithdrawalRequest
+from .models import (
+    OrganizationAccount,
+    Payment,
+    PaymentEvent,
+    Wallet,
+    WithdrawalRequest,
+)
 
 
 @admin.register(Payment)
@@ -159,3 +165,20 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
             )
 
         return redirect("..")
+
+
+@admin.register(OrganizationAccount)
+class OrgAccountAdmin(admin.ModelAdmin):
+    list_display = ("available_balance", "total_earnings", "last_updated")
+
+
+@admin.register(Wallet)
+class WalletAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "available_balance",
+        "total_earned",
+        "total_withdrawn",
+        "last_withdrawal_at",
+    )
+    search_fields = ("user__email", "user__username")
