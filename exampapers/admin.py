@@ -5,7 +5,6 @@ from exampapers.tasks import generate_paper_preview
 from .models import (
     Category,
     Course,
-    Notification,
     Order,
     Paper,
     PaperDownload,
@@ -94,13 +93,6 @@ class OrderAdmin(admin.ModelAdmin):
 class WishlistAdmin(admin.ModelAdmin):
     list_display = ("user", "paper", "added_at")
     search_fields = ("user__email", "paper__title")
-
-
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("user", "message", "is_read", "timestamp")
-    list_filter = ("is_read",)
-    search_fields = ("user__email", "message")
 
 
 @admin.register(Statistics)

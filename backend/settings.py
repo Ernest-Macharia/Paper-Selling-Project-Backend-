@@ -45,14 +45,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://gradesworld.com",
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
-    "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://gradesworld.com",
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
-    "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "channels",
 ]
 
 REST_FRAMEWORK = {
@@ -135,6 +136,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
 
 
 # Database
@@ -207,6 +209,16 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(
             minute=5, hour=0, day_of_week="sun"
         ),  # every hour on Sunday
+    },
+}
+
+# Redis as the channel layer
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
     },
 }
 

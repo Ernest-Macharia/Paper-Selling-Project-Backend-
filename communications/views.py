@@ -2,11 +2,15 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import ContactMessage, EmailSubscriber
-from .serializers import ContactMessageSerializer, EmailSubscriberSerializer
+from .models import ChatMessage, ContactMessage, EmailSubscriber
+from .serializers import (
+    ChatMessageSerializer,
+    ContactMessageSerializer,
+    EmailSubscriberSerializer,
+)
 
 
 class ContactMessageCreateView(generics.CreateAPIView):
@@ -89,3 +93,12 @@ class EmailUnsubscribeView(generics.DestroyAPIView):
             return Response(
                 {"detail": "Email not found."}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class ChatHistoryView(generics.ListAPIView):
+    serializer_class = ChatMessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        room = self.kwargs["room"]
+        return ChatMessage.objects.filter(room=room).order_by("timestamp")

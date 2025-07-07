@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ContactMessage, EmailSubscriber
+from .models import ChatMessage, ContactMessage, EmailSubscriber
 
 
 class ContactMessageSerializer(serializers.ModelSerializer):
@@ -12,4 +12,10 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 class EmailSubscriberSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailSubscriber
+        fields = "__all__"
+
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
         fields = "__all__"
