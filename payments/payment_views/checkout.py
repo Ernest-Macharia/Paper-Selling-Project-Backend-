@@ -1,4 +1,9 @@
+from datetime import datetime
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -51,6 +56,29 @@ class CheckoutInitiateView(APIView):
 
             try:
                 result = handle_checkout(payment_method, order)
+                # Send confirmation email
+                subject = "Your GradesWorld Order Confirmation"
+                from_email = settings.DEFAULT_FROM_EMAIL
+                to_email = user.email
+
+                html_content = render_to_string(
+                    "emails/order_confirmation_email.html",
+                    {
+                        "user": user,
+                        "papers": papers,
+                        "total_price": total_price,
+                        "order_id": order.id,
+                        "year": datetime.now().year,
+                    },
+                )
+                text_content = "Your order has been placed successfully."
+
+                msg = EmailMultiAlternatives(
+                    subject, text_content, from_email, [to_email]
+                )
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
 

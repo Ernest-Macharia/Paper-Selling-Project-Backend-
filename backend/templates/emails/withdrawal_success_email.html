@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Withdrawal Successful</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      padding: 20px;
+      color: #111827;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    h2 {
+      color: #16a34a;
+    }
+    .details {
+      margin-top: 20px;
+    }
+    .details p {
+      margin: 8px 0;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Withdrawal Successful</h2>
+    <p>Hello {{ user.first_name|default:user.username }},</p>
+
+    <p>We’ve successfully processed your withdrawal request. Here are the details:</p>
+
+    <div class="details">
+      <p><strong>Amount:</strong> ${{ withdrawal.amount }}</p>
+      <p><strong>Processed On:</strong> {{ withdrawal.processed_at|date:"F j, Y, g:i a" }}</p>
+      <p><strong>Transaction ID:</strong> {{ withdrawal.transaction_id }}</p>
+    </div>
+
+    <p>The funds should now be available in your selected account.</p>
+
+    <div class="footer">
+      <p>Thanks for using GradesWorld!<br>The GradesWorld Team</p>
+    </div>
+  </div>
+</body>
+</html>

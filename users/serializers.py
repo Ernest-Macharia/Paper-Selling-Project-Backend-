@@ -115,6 +115,11 @@ class CustomTokenObtainSerializer(serializers.Serializer):
                 {"email": "User with this email does not exist."}
             )
 
+        if not user.is_active:
+            raise serializers.ValidationError(
+                {"email": "Account is not active. Please activate your account."}
+            )
+
         if not user.check_password(password):
             raise serializers.ValidationError({"password": "Incorrect password."})
 

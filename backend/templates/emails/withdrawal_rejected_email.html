@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Withdrawal Rejected</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fef2f2;
+      padding: 20px;
+      color: #991b1b;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+    }
+    h2 {
+      color: #dc2626;
+    }
+    .details {
+      margin-top: 20px;
+    }
+    .details p {
+      margin: 8px 0;
+      color: #1f2937;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Withdrawal Request Rejected</h2>
+    <p>Hello {{ user.first_name|default:user.username }},</p>
+
+    <p>Unfortunately, your recent withdrawal request could not be processed. Please see the details below:</p>
+
+    <div class="details">
+      <p><strong>Amount:</strong> ${{ withdrawal.amount }}</p>
+      <p><strong>Requested On:</strong> {{ withdrawal.requested_at|date:"F j, Y, g:i a" }}</p>
+      <p><strong>Status:</strong> Rejected</p>
+      <p><strong>Reason:</strong> {{ withdrawal.rejection_reason|default:"Not specified" }}</p>
+    </div>
+
+    <p>If you believe this was an error or need further assistance, please contact support.</p>
+
+    <div class="footer">
+      <p>Thank you,<br>The GradesWorld Team</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activate Your GradesWorld Account</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f4;
+        padding: 0;
+        margin: 0;
+      }
+      .email-wrapper {
+        max-width: 600px;
+        margin: 30px auto;
+        background: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+      .email-header {
+        background-color: #007bff;
+        color: #ffffff;
+        padding: 20px;
+        text-align: center;
+      }
+      .email-body {
+        padding: 30px;
+        color: #333333;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        margin-top: 20px;
+        background-color: #007bff;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .email-footer {
+        padding: 20px;
+        text-align: center;
+        font-size: 13px;
+        color: #888888;
+      }
+      @media (max-width: 600px) {
+        .email-body {
+          padding: 20px;
+        }
+        .btn {
+          width: 100%;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-wrapper">
+      <div class="email-header">
+        <h2>Welcome to GradesWorld 🎓</h2>
+      </div>
+      <div class="email-body">
+        <p>Hi {{ user.first_name }},</p>
+        <p>
+          Thank you for registering at <strong>GradesWorld</strong>. Please
+          activate your account to get started.
+        </p>
+        <p>
+          Click the button below to activate your account:
+        </p>
+        <a href="{{ activation_link }}" class="btn">Activate Account</a>
+        <p>If you didn’t sign up for GradesWorld, you can safely ignore this email.</p>
+        <p>Cheers,<br />The GradesWorld Team</p>
+      </div>
+      <div class="email-footer">
+        © {{ current_year }} GradesWorld. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>

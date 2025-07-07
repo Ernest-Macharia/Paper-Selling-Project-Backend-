@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Withdrawal Confirmation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    h2 {
+      color: #1d4ed8;
+    }
+    .details {
+      margin-top: 20px;
+    }
+    .details p {
+      margin: 8px 0;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Withdrawal Request Confirmed</h2>
+    <p>Hello {{ user.first_name|default:user.username }},</p>
+
+    <p>Your withdrawal request has been received and is being processed. Below are the details of your request:</p>
+
+    <div class="details">
+      <p><strong>Amount:</strong> ${{ withdrawal.amount }}</p>
+      <p><strong>Requested On:</strong> {{ withdrawal.created_at|date:"F j, Y, g:i a" }}</p>
+      <p><strong>Status:</strong> {{ withdrawal.status|title }}</p>
+    </div>
+
+    <p>If you did not initiate this request, please contact us immediately.</p>
+
+    <div class="footer">
+      <p>Thanks,<br>GradesWorld Team</p>
+    </div>
+  </div>
+</body>
+</html>

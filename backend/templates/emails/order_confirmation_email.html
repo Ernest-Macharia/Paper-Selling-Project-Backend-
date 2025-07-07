@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmation</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;">
+    <table width="100%" bgcolor="#f4f4f4" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="20" cellspacing="0" bgcolor="#ffffff" style="margin: 20px 0; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+                    <tr>
+                        <td align="center" style="background-color: #4CAF50; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                            <h2 style="margin: 0; padding: 20px;">GradesWorld</h2>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <h3 style="color: #333;">Hello {{ user.first_name }},</h3>
+                            <p style="color: #555; font-size: 15px;">
+                                Thank you for your order! Here are the details of your purchase:
+                            </p>
+
+                            <h4 style="color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Order Summary</h4>
+                            <ul style="list-style: none; padding-left: 0; color: #555;">
+                                {% for paper in papers %}
+                                <li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                                    <strong>{{ paper.title }}</strong>
+                                    <span style="float: right;">${{ paper.price }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+
+                            <p style="margin-top: 20px; font-size: 16px;">
+                                <strong>Total Price:</strong> ${{ total_price }}<br>
+                                <strong>Order ID:</strong> {{ order_id }}
+                            </p>
+
+                            <p style="color: #555;">
+                                We’ll notify you once the paper(s) are ready for download. If you have any questions, feel free to reply to this email.
+                            </p>
+
+                            <p style="margin-top: 30px; color: #888; font-size: 14px;">
+                                Regards,<br>
+                                <strong>The GradesWorld Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center" style="background-color: #f0f0f0; font-size: 12px; color: #999; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                            &copy; {{ year }} GradesWorld. All rights reserved.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

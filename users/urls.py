@@ -1,11 +1,13 @@
 from django.urls import path
 
+from . import views
 from .views import (
     CurrentUserView,
     CustomLoginView,
     PasswordResetConfirmView,
     RegisterUserView,
     RequestPasswordResetView,
+    ResendActivationEmailView,
     UpdateUserDetailsView,
     UserListView,
 )
@@ -30,4 +32,10 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="reset-password",
     ),
+    path(
+        "resend-activation/",
+        ResendActivationEmailView.as_view(),
+        name="resend_activation",
+    ),
+    path("activate/<uidb64>/<token>/", views.activate_user, name="activate_user"),
 ]
