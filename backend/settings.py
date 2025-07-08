@@ -27,28 +27,35 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_URL = config("BASE_URL", default="http://localhost:8000")
 
 ALLOWED_HOSTS = [
-    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
+    "gradesworld.com",
+    "www.gradesworld.com",
+    "127.0.0.1",
+    "localhost",
 ]
+
 CORS_ALLOWED_ORIGINS = [
-    h.strip()
-    for h in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",")
-    if h.strip()
+    "https://gradesworld.com",
+    "https://www.gradesworld.com",
+    "http://127.0.0.1:8000",
+    "http://localhost:5173",
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    h.strip()
-    for h in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
-    if h.strip()
+    "https://gradesworld.com",
+    "https://www.gradesworld.com",
+    "http://127.0.0.1:8000",
+    "http://localhost:5173",
 ]
 
 # Email
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
