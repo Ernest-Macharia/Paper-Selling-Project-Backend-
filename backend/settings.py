@@ -26,21 +26,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 BASE_URL = config("BASE_URL", default="http://localhost:8000")
 
-# EMAIL_BACKEND = env("EMAIL_BACKEND")
-# EMAIL_HOST = env("EMAIL_HOST")
-# EMAIL_PORT = env.int("EMAIL_PORT")
-# EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
-# EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-# EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-# DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
+CORS_ALLOWED_ORIGINS = [
+    h.strip()
+    for h in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",")
+    if h.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    h.strip()
+    for h in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if h.strip()
+]
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "scholar@gradesworld.com"
-EMAIL_HOST_PASSWORD = "lqfhohckfcthhpyd"
-DEFAULT_FROM_EMAIL = "scholar@gradesworld.com"
+# Email
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -50,27 +58,6 @@ SECRET_KEY = config("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
-
-ALLOWED_HOSTS = [
-    "gradesworld.com",
-    "www.gradesworld.com",
-    "127.0.0.1",
-    "localhost",
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "https://gradesworld.com",
-    "https://www.gradesworld.com",
-    "http://127.0.0.1:8000",
-    "http://localhost:5173",
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://gradesworld.com",
-    "https://www.gradesworld.com",
-    "http://127.0.0.1:8000",
-    "http://localhost:5173",
-]
 
 AUTH_USER_MODEL = "users.User"
 
