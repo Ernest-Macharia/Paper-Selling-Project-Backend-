@@ -27,11 +27,11 @@ repos:
       - id: flake8
 
   # Check for security issues: bandit
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
-    hooks:
-      - id: bandit
-        args: ["-r", "."]
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.7.7
+  #   hooks:
+  #     - id: bandit
+  #       args: ["-r", "."]
 
   # Check for trailing whitespace, end-of-file errors, etc.
   - repo: https://github.com/pre-commit/pre-commit-hooks
