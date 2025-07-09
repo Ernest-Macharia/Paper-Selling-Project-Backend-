@@ -164,29 +164,6 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         )
 
 
-class ActivateAccountView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, uid, token):
-        try:
-            uid = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({"detail": "Invalid activation link."}, status=400)
-
-        if user.is_active:
-            return Response({"detail": "Account already activated."}, status=200)
-
-        if default_token_generator.check_token(user, token):
-            user.is_active = True
-            user.save()
-            return Response({"detail": "Account activated successfully."}, status=200)
-        else:
-            return Response(
-                {"detail": "Activation link is invalid or has expired."}, status=400
-            )
-
-
 class ResendActivationEmailView(APIView):
     permission_classes = [AllowAny]
 
