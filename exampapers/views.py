@@ -1,5 +1,10 @@
+from datetime import datetime
+
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, Q, Sum
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions
@@ -305,14 +310,36 @@ class PaperDownloadView(APIView):
             user=request.user, paper=paper, ip_address=self.get_client_ip(request)
         )
 
+        # Send email notification
+        self.send_download_email(request.user, paper)
+
         return Response({"file_url": request.build_absolute_uri(paper.file.url)})
 
     def get_client_ip(self, request):
-        """Get real client IP address behind proxy (if any)"""
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
             return x_forwarded_for.split(",")[0]
         return request.META.get("REMOTE_ADDR")
+
+    def send_download_email(self, user, paper):
+        subject = f"You downloaded: {paper.title}"
+        from_email = settings.DEFAULT_FROM_EMAIL
+        to_email = user.email
+
+        html_content = render_to_string(
+            "emails/paper_download_email.html",
+            {
+                "user": user,
+                "paper": paper,
+                "download_time": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+                "year": datetime.now().year,
+            },
+        )
+        text_content = f"You downloaded the paper: {paper.title}"
+
+        msg = EmailMultiAlternatives(subject, text_content, from_email, [to_email])
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
 
 
 class PaperReviewCreateAPIView(generics.CreateAPIView):
