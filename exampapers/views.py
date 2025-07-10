@@ -2,7 +2,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, F, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils.timezone import now
@@ -122,15 +122,30 @@ class UserDownloadsView(ListAPIView):
         return Response(enriched_data)
 
 
-class PaperDetailView(generics.RetrieveAPIView):
-    queryset = Paper.objects.all()
-    serializer_class = PaperSerializer
+class PaperDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
+    def get(self, request, pk):
+        paper = get_object_or_404(Paper, pk=pk, status="published")
+        Paper.objects.filter(pk=paper.pk).update(views=F("views") + 1)
+        serializer = PaperSerializer(paper, context={"request": request})
+        return Response(serializer.data)
+
+
+class MostViewedPapersView(ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Paper.objects.filter(status="published").order_by("-views")
+
+
+class LatestUserPapersView(ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Paper.objects.filter(author=self.request.user).order_by("-upload_date")
 
 
 class PaperUploadView(generics.CreateAPIView):
