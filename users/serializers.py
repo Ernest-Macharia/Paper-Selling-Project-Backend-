@@ -23,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             "gender",
             "birth_year",
             "school",
+            "country",
             "school_type",
             "course",
         )
@@ -41,6 +42,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "gender",
             "birth_year",
             "school",
+            "country",
             "school_type",
             "course",
             "avatar",

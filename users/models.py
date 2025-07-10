@@ -37,6 +37,7 @@ class User(AbstractUser):
     )
     birth_year = models.PositiveIntegerField(null=True, blank=True)
     school = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=50, blank=True, null=True)
     school_type = models.CharField(max_length=50, blank=True, null=True)
     course = models.CharField(max_length=255, blank=True, null=True)
 
