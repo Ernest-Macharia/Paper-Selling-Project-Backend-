@@ -14,13 +14,17 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "first_name",
             "last_name",
-            "username",
             "email",
+            "full_name",
             "is_seller",
             "is_buyer",
             "balance",
             "avatar",
-            "full_name",
+            "gender",
+            "birth_year",
+            "school",
+            "school_type",
+            "course",
         )
 
     def get_full_name(self, obj):
@@ -30,14 +34,24 @@ class UserSerializer(serializers.ModelSerializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email"]
-        extra_kwargs = {"email": {"required": True}}
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "gender",
+            "birth_year",
+            "school",
+            "school_type",
+            "course",
+            "avatar",
+        ]
+        extra_kwargs = {
+            "email": {"required": True},
+        }
 
     def update(self, instance, validated_data):
-        # Update fields
-        instance.first_name = validated_data.get("first_name", instance.first_name)
-        instance.last_name = validated_data.get("last_name", instance.last_name)
-        instance.email = validated_data.get("email", instance.email)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
 
         # Regenerate username
         full_name = f"{instance.first_name} {instance.last_name}".strip()

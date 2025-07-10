@@ -29,20 +29,27 @@ class User(AbstractUser):
     is_buyer = models.BooleanField(default=False)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    gender = models.CharField(
+        max_length=10,
+        choices=[("male", "Male"), ("female", "Female"), ("other", "Other")],
+        null=True,
+        blank=True,
+    )
+    birth_year = models.PositiveIntegerField(null=True, blank=True)
+    school = models.CharField(max_length=255, blank=True, null=True)
+    school_type = models.CharField(max_length=50, blank=True, null=True)
+    course = models.CharField(max_length=255, blank=True, null=True)
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = "email"  # Use email as the username field
-    REQUIRED_FIELDS = []  # Remove username requirement
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
 
     def save(self, *args, **kwargs):
         created = self.pk is None
-
         full_name = f"{self.first_name} {self.last_name}".strip()
         self.username = full_name.lower().replace(" ", "_")
-
         super().save(*args, **kwargs)
 
-        # Create wallet only after user is saved for the first time
         if created:
             Wallet.objects.get_or_create(user=self)
