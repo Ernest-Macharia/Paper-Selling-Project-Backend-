@@ -1,10 +1,11 @@
 import logging
 
 from django.conf import settings
+from django.db import transaction
 from django.utils.timezone import now
 
 from mpesa_api.utils import get_mpesa_access_token, send_money_b2c
-from payments.models import WithdrawalRequest
+from payments.models import Wallet, WithdrawalRequest
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +17,12 @@ def disburse_stripe(withdrawal):
 
     try:
         transfer = stripe.Transfer.create(
-            amount=int(withdrawal.amount * 100),  # convert to cents
+            amount=int(withdrawal.amount * 100),  # in cents
             currency="usd",
-            destination=withdrawal.destination,  # Stripe Connect Account ID
+            destination=withdrawal.destination,
             description=f"Withdrawal for {withdrawal.user.email}",
         )
-        withdrawal.status = "paid"
-        withdrawal.paid_at = now()
-        withdrawal.transaction_reference = transfer.id
-        withdrawal.save(update_fields=["status", "paid_at", "transaction_reference"])
+        finalize_withdrawal(withdrawal, transfer.id)
         return {"status": "success", "transfer_id": transfer.id}
     except stripe.error.StripeError as e:
         logger.error(f"Stripe payout failed: {e}")
@@ -64,21 +62,15 @@ def disburse_paypal(withdrawal):
     )
 
     if payout.create():
-        withdrawal.status = "paid"
-        withdrawal.paid_at = now()
-        withdrawal.transaction_reference = payout.batch_header.payout_batch_id
-        withdrawal.save(update_fields=["status", "paid_at"])
-        return {
-            "status": "success",
-            "transaction_reference:": payout.batch_header.payout_batch_id,
-        }
+        batch_id = payout.batch_header.payout_batch_id
+        finalize_withdrawal(withdrawal, batch_id)
+        return {"status": "success", "transaction_reference": batch_id}
     else:
         logger.error(f"PayPal payout failed: {payout.error}")
         return {"status": "failed", "error": payout.error}
 
 
 def disburse_mpesa(withdrawal):
-
     try:
         token = get_mpesa_access_token()
         result = send_money_b2c(
@@ -88,11 +80,9 @@ def disburse_mpesa(withdrawal):
             occasion="Paper Earnings",
             remarks=f"Payout for {withdrawal.user.email}",
         )
-        withdrawal.status = "paid"
-        withdrawal.paid_at = now()
-        withdrawal.transaction_reference = result.get("ConversationID")
-        withdrawal.save(update_fields=["status", "paid_at", "transaction_reference"])
-        return {"status": "success", "transaction_id": result.get("ConversationID")}
+        conversation_id = result.get("ConversationID")
+        finalize_withdrawal(withdrawal, conversation_id)
+        return {"status": "success", "transaction_id": conversation_id}
     except Exception as e:
         logger.error(f"M-Pesa payout failed: {e}")
         return {"status": "failed", "error": str(e)}
@@ -111,6 +101,23 @@ def resolve_destination(withdrawal):
         return profile.mpesa_phone
     else:
         raise ValueError("Unsupported payout method")
+
+
+@transaction.atomic
+def finalize_withdrawal(withdrawal, transaction_reference):
+    withdrawal.status = "paid"
+    withdrawal.paid_at = now()
+    withdrawal.transaction_reference = transaction_reference
+    withdrawal.save(update_fields=["status", "paid_at", "transaction_reference"])
+
+    # Deduct from Wallet
+    wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
+    if wallet.balance < withdrawal.amount:
+        raise ValueError("Insufficient wallet balance during payout finalization")
+    wallet.balance -= withdrawal.amount
+    wallet.save(update_fields=["balance"])
+
+    logger.info(f"Withdrawal {withdrawal.id} finalized for {withdrawal.user.email}")
 
 
 def disburse_withdrawal(withdrawal: WithdrawalRequest):

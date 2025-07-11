@@ -11,6 +11,7 @@ from .models import (
     OrganizationAccount,
     Payment,
     PaymentEvent,
+    UserPayoutProfile,
     Wallet,
     WithdrawalRequest,
 )
@@ -42,25 +43,20 @@ class PaymentAdmin(admin.ModelAdmin):
 
     refund_button.short_description = "Refund"
 
-    # Custom admin URL
     def get_urls(self):
-        from django.urls import path
-
         urls = super().get_urls()
         custom_urls = [
             path(
                 "refund/<int:payment_id>/",
                 self.admin_site.admin_view(self.process_refund),
                 name="payments_refund",
-            )
+            ),
         ]
         return custom_urls + urls
 
     def process_refund(self, request, payment_id):
         result = process_refund(payment_id)
         self.message_user(request, f"Refund result: {result}")
-        from django.shortcuts import redirect
-
         return redirect(request.META.get("HTTP_REFERER", "/admin/"))
 
 
@@ -125,8 +121,11 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
 
     def payout_action(self, obj):
         if obj.status == "approved":
-            url = reverse("admin:withdrawal-pay", args=[obj.pk])
-            return format_html('<a class="button" href="{}">Pay Now</a>', url)
+            try:
+                url = reverse("admin:payments_withdrawalrequest_pay", args=[obj.pk])
+                return format_html('<a class="button" href="{}">Pay Now</a>', url)
+            except Exception:
+                return "-"
         return "-"
 
     payout_action.short_description = "Payout"
@@ -137,7 +136,7 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
             path(
                 "<int:withdrawal_id>/pay/",
                 self.admin_site.admin_view(self.process_single_withdrawal),
-                name="withdrawal-pay",
+                name="payments_withdrawalrequest_pay",  # consistent with reverse()
             ),
         ]
         return custom_urls + urls
@@ -154,12 +153,24 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
         try:
             result = disburse_withdrawal(withdrawal)
             if result["status"] == "success":
+                withdrawal.status = "paid"
+                withdrawal.paid_at = now()
+                withdrawal.failure_reason = ""
+                withdrawal.save()
                 self.message_user(request, f"✅ Withdrawal {withdrawal.id} paid.")
             else:
+                withdrawal.status = "failed"
+                withdrawal.failure_reason = result.get("error", "Unknown error")
+                withdrawal.save()
                 self.message_user(
-                    request, f"❌ Failed: {result.get('error')}", level=messages.ERROR
+                    request,
+                    f"❌ Failed: {withdrawal.failure_reason}",
+                    level=messages.ERROR,
                 )
         except Exception as e:
+            withdrawal.status = "failed"
+            withdrawal.failure_reason = str(e)
+            withdrawal.save()
             self.message_user(
                 request, f"❌ Exception occurred: {str(e)}", level=messages.ERROR
             )
@@ -170,6 +181,11 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
 @admin.register(OrganizationAccount)
 class OrgAccountAdmin(admin.ModelAdmin):
     list_display = ("available_balance", "total_earnings", "last_updated")
+
+
+@admin.register(UserPayoutProfile)
+class UserPayoutProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "paypal_email", "stripe_account_id", "mpesa_phone")
 
 
 @admin.register(Wallet)
