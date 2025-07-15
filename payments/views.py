@@ -135,15 +135,16 @@ class PayoutInfoView(APIView):
 
     def get(self, request):
         user = request.user
+        wallet, _ = Wallet.objects.get_or_create(user=user)
         profile, _ = UserPayoutProfile.objects.get_or_create(user=user)
 
         return Response(
             {
-                "balance": user.wallet.available_balance,
+                "balance": wallet.available_balance,
                 "preferred_method": profile.preferred_method,
                 "paypal_email": profile.paypal_email,
                 "stripe_account_id": profile.stripe_account_id,
                 "mpesa_phone": profile.mpesa_phone,
-                "last_withdrawal_at": user.wallet.last_withdrawal_at,
+                "last_withdrawal_at": wallet.last_withdrawal_at,
             }
         )
