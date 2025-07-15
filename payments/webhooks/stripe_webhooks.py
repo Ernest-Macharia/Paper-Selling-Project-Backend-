@@ -13,7 +13,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @csrf_exempt
-def stripe_webhook(request):
+def handle_stripe_event(request):
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
     endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
