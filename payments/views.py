@@ -1,4 +1,5 @@
-from rest_framework import permissions, serializers, viewsets
+from django.utils import timezone
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,10 +11,11 @@ from payments.services.payment_verification import (
     verify_paypal_payment,
     verify_stripe_payment,
 )
+from payments.services.payout_service import disburse_withdrawal
 from paypal_api.models import PayPalPayment
 from stripe_api.models import StripePayment
 
-from .models import Payment, WithdrawalRequest
+from .models import Payment, UserPayoutProfile, WithdrawalRequest
 from .serializers import PaymentSerializer, WalletSummarySerializer
 
 
@@ -108,17 +110,15 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         amount = serializer.validated_data["amount"]
 
-        if amount < 10:
-            raise serializers.ValidationError("Minimum withdrawal amount is $10")
+        # Deduct from wallet immediately
+        wallet = user.wallet
+        wallet.available_balance -= amount
+        wallet.last_withdrawal_at = timezone.now()
+        wallet.save(update_fields=["available_balance", "last_withdrawal_at"])
 
-        if amount > user.wallet.balance:
-            raise serializers.ValidationError("Insufficient balance.")
-
-        # Deduct balance from wallet
-        user.wallet.balance -= amount
-        user.wallet.save()
-
-        serializer.save(user=user)
+        # Create and optionally approve + disburse
+        withdrawal = serializer.save(user=user, status="approved")
+        disburse_withdrawal(withdrawal)
 
 
 class WalletSummaryView(APIView):
@@ -128,3 +128,22 @@ class WalletSummaryView(APIView):
         wallet = request.user.wallet
         serializer = WalletSummarySerializer(wallet)
         return Response(serializer.data)
+
+
+class PayoutInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        profile, _ = UserPayoutProfile.objects.get_or_create(user=user)
+
+        return Response(
+            {
+                "balance": user.wallet.available_balance,
+                "preferred_method": profile.preferred_method,
+                "paypal_email": profile.paypal_email,
+                "stripe_account_id": profile.stripe_account_id,
+                "mpesa_phone": profile.mpesa_phone,
+                "last_withdrawal_at": user.wallet.last_withdrawal_at,
+            }
+        )

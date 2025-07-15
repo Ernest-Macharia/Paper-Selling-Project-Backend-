@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Payment, Wallet, WithdrawalRequest
@@ -20,38 +23,48 @@ class CheckoutInitiateSerializer(serializers.Serializer):
 class WithdrawalRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = WithdrawalRequest
-        fields = ["id", "amount", "method", "data", "status", "created_at"]
+        fields = ["id", "amount", "method", "destination", "status", "created_at"]
+        read_only_fields = ["destination", "status", "created_at"]
 
-    def validate(self, attrs):
+    def validate(self, data):
         user = self.context["request"].user
-        profile = getattr(user, "userpayoutprofile", None)
-        method = attrs["method"]
+        amount = data.get("amount")
+        method = data.get("method")
 
-        if not profile:
-            raise serializers.ValidationError("Payout profile not configured.")
+        if amount < 10:
+            raise serializers.ValidationError("Minimum withdrawal amount is $10.")
 
-        if method == "paypal" and not profile.paypal_email:
-            raise serializers.ValidationError("PayPal email is missing.")
-        if method == "stripe" and not profile.stripe_account_id:
-            raise serializers.ValidationError("Stripe account is missing.")
-        if method == "mpesa" and not profile.mpesa_phone:
-            raise serializers.ValidationError("M-Pesa number is missing.")
-
-        return attrs
-
-    def create(self, validated_data):
-        user = self.context["request"].user
-        wallet = user.wallet
-
-        if wallet.available_balance < validated_data["amount"]:
+        if amount > user.wallet.available_balance:
             raise serializers.ValidationError("Insufficient wallet balance.")
 
-        # Deduct balance
-        wallet.available_balance -= validated_data["amount"]
-        wallet.total_withdrawn += validated_data["amount"]
-        wallet.save()
+        recent = WithdrawalRequest.objects.filter(
+            user=user,
+            created_at__gte=timezone.now() - timedelta(hours=6),
+            status__in=["pending", "approved"],
+        )
+        if recent.exists():
+            raise serializers.ValidationError(
+                "You already have a recent withdrawal request."
+            )
 
-        return WithdrawalRequest.objects.create(user=user, **validated_data)
+        profile = getattr(user, "userpayoutprofile", None)
+        if not profile:
+            raise serializers.ValidationError("No payout profile configured.")
+
+        if method == "stripe":
+            destination = profile.stripe_account_id
+        elif method == "paypal":
+            destination = profile.paypal_email
+        elif method == "mpesa":
+            destination = profile.mpesa_phone
+        else:
+            raise serializers.ValidationError("Invalid payout method selected.")
+
+        if not destination:
+            raise serializers.ValidationError(f"No destination set for {method}.")
+
+        data["destination"] = destination
+        return data
 
 
 class WalletSummarySerializer(serializers.ModelSerializer):

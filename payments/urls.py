@@ -4,7 +4,12 @@ from rest_framework.routers import DefaultRouter
 from payments.payment_views.checkout import CheckoutInitiateView, unified_checkout
 from payments.payment_views.refunds import refund_payment
 from payments.services.webhooks import mpesa_webhook, paypal_webhook, stripe_webhook
-from payments.views import WalletSummaryView, WithdrawalRequestViewSet, verify_payment
+from payments.views import (
+    PayoutInfoView,
+    WalletSummaryView,
+    WithdrawalRequestViewSet,
+    verify_payment,
+)
 
 router = DefaultRouter()
 router.register(r"withdrawals", WithdrawalRequestViewSet, basename="withdrawal")
@@ -17,6 +22,7 @@ urlpatterns = [
         "checkout/initiate/", CheckoutInitiateView.as_view(), name="checkout_initiate"
     ),
     path("verify/", verify_payment, name="verify-payment"),
+    path("payout-info/", PayoutInfoView.as_view(), name="payout-info"),
     # Refund API
     path("refund/<int:payment_id>/", refund_payment, name="refund_payment"),
     # Webhooks
