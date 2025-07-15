@@ -1,7 +1,5 @@
 import json
 
-import stripe
-from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -13,22 +11,7 @@ from payments.webhooks.stripe_webhooks import handle_stripe_event
 
 @csrf_exempt
 def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
-    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=sig_header,
-            secret=endpoint_secret,
-        )
-        handle_stripe_event(event)
-        return HttpResponse(status=200)
-    except stripe.error.SignatureVerificationError:
-        return HttpResponse(status=400)
-    except Exception:
-        return HttpResponse(status=500)
+    return handle_stripe_event(request)
 
 
 @csrf_exempt
