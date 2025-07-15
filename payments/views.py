@@ -15,7 +15,7 @@ from payments.services.payout_service import disburse_withdrawal
 from paypal_api.models import PayPalPayment
 from stripe_api.models import StripePayment
 
-from .models import Payment, UserPayoutProfile, WithdrawalRequest
+from .models import Payment, UserPayoutProfile, Wallet, WithdrawalRequest
 from .serializers import PaymentSerializer, WalletSummarySerializer
 
 
@@ -125,7 +125,7 @@ class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wallet = request.user.wallet
+        wallet, created = Wallet.objects.get_or_create(user=request.user)
         serializer = WalletSummarySerializer(wallet)
         return Response(serializer.data)
 
