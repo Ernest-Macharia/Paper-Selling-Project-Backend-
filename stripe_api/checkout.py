@@ -20,7 +20,8 @@ def handle_stripe_checkout(order):
 
     try:
         amount_cents = int(order.price * 100)
-        baseURL = settings.BASE_URL
+        success_url = settings.STRIPE_SUCCESS_URL.replace("{ORDER_ID}", str(order.id))
+        cancel_url = settings.STRIPE_CANCEL_URL.replace("{ORDER_ID}", str(order.id))
 
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -44,8 +45,8 @@ def handle_stripe_checkout(order):
             },
             expand=["payment_intent"],
             idempotency_key=f"order-{order.id}",
-            success_url=f"{baseURL}/payment/success?session_id={{CHECKOUT_SESSION_ID}}&order_id={order.id}",
-            cancel_url=f"{baseURL}/payment/cancel?order_id={order.id}",
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
 
         # Create Payment record
