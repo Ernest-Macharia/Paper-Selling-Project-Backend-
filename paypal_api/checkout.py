@@ -24,7 +24,6 @@ def handle_paypal_checkout(order):
     if not first_paper:
         raise ValueError("Order has no papers associated")
 
-    base_url = settings.BASE_URL
     access_token = get_paypal_access_token()
 
     data = {
@@ -36,8 +35,12 @@ def handle_paypal_checkout(order):
             }
         ],
         "application_context": {
-            "return_url": f"{base_url}/payment/success?order_id={order.id}",
-            "cancel_url": settings.PAYPAL_CANCEL_URL,
+            "return_url": settings.PAYPAL_SUCCESS_URL.replace(
+                "{ORDER_ID}", str(order.id)
+            ),
+            "cancel_url": settings.PAYPAL_CANCEL_URL.replace(
+                "{ORDER_ID}", str(order.id)
+            ),
         },
     }
 
