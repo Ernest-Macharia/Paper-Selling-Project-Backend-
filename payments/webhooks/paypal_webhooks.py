@@ -39,11 +39,26 @@ def handle_paypal_event(request):
             raw_data=payload,
         )
 
-        if event_type == "PAYMENT.SALE.COMPLETED":
+        if (
+            event_type
+            in [
+                "PAYMENT.SALE.COMPLETED",
+                "PAYMENT.CAPTURE.COMPLETED",
+                "CHECKOUT.ORDER.COMPLETED",
+            ]
+            and payment
+        ):
             update_payment_status(payment.external_id, "completed")
             logger.info(
-                f"[PayPal Webhook] Updated payment status to completed for {payment.id}"
+                f"[PayPal Webhook] Payment marked as completed: {payment.external_id}"
             )
+
+        if event_type in ["PAYMENT.SALE.DENIED", "PAYMENT.SALE.REFUNDED"] and payment:
+            update_payment_status(payment.external_id, "refunded")
+            logger.warning(
+                f"[PayPal Webhook] Payment was refunded or denied: {payment.external_id}"
+            )
+
     else:
         logger.warning(
             f"[PayPal Webhook] No payment found for external ID: {fallback_id} or invoice: {invoice_number}"
