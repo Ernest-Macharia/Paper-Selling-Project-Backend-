@@ -24,6 +24,7 @@ def handle_stripe_event(request):
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        logger.info(f"[Stripe Webhook] Event received: {event['type']}")
     except (ValueError, stripe.error.SignatureVerificationError) as e:
         logger.error(f"[Stripe Webhook] Signature Error: {e}")
         return HttpResponse(status=400)
@@ -33,30 +34,37 @@ def handle_stripe_event(request):
         session = event.get("data", {}).get("object", {})
         external_id = session.get("id")
 
-        # Fetch payment, but don't assume it exists
+        logger.info(f"[Stripe Webhook] Session ID: {external_id}, Type: {event_type}")
+
         payment = Payment.objects.filter(
             external_id=external_id, gateway="stripe"
         ).first()
 
-        if payment:
+        if not payment:
+            logger.warning(
+                f"[Stripe Webhook] Payment not found for session id: {external_id}"
+            )
+        else:
             PaymentEvent.objects.create(
                 payment=payment,
                 gateway="stripe",
                 event_type=event_type,
                 payload=session,
             )
-        else:
-            logger.warning(
-                f"[Stripe Webhook] No Payment found for session id: {external_id}"
+            logger.info(
+                f"[Stripe Webhook] PaymentEvent created for payment id: {payment.id}"
             )
 
-        # Only update payment if it exists
         if event_type == "checkout.session.completed" and payment:
             update_payment_status(external_id, "completed", gateway="stripe")
 
             metadata = session.get("metadata", {})
             paper_id = metadata.get("paper_id")
             user_id = metadata.get("user_id")
+
+            logger.info(
+                f"[Stripe Webhook] Metadata: paper_id={paper_id}, user_id={user_id}"
+            )
 
             if paper_id and user_id:
                 try:
@@ -66,6 +74,7 @@ def handle_stripe_event(request):
                         and not payment.order.papers.filter(pk=paper.pk).exists()
                     ):
                         payment.order.papers.add(paper)
+                        logger.info(f"[Stripe Webhook] Paper {paper_id} added to order")
                 except Paper.DoesNotExist:
                     logger.error(
                         f"[Stripe Webhook] Paper not found with id: {paper_id}"
