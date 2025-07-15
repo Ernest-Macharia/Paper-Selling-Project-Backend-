@@ -74,5 +74,7 @@ class WalletSummarySerializer(serializers.ModelSerializer):
             "available_balance",
             "total_earned",
             "total_withdrawn",
+            "last_withdrawal_at",
             "last_updated",
+            "currency",
         ]

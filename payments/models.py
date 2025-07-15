@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from exampapers.models import Order
 
@@ -108,8 +109,18 @@ class OrganizationAccount(models.Model):
 
 
 class Wallet(models.Model):
+    class Currency(models.TextChoices):
+        USD = "USD", _("US Dollar")
+        EUR = "EUR", _("Euro")
+        KES = "KES", _("Kenyan Shilling")
+        GBP = "GBP", _("British Pound")
+
     user = models.OneToOneField("users.User", on_delete=models.CASCADE)
+    currency = models.CharField(
+        max_length=3, choices=Currency.choices, default=Currency.USD
+    )
     available_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_withdrawn = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     last_withdrawal_at = models.DateTimeField(null=True, blank=True)
+    last_updated = models.DateTimeField(auto_now=True)
