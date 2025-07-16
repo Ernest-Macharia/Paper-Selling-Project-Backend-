@@ -232,9 +232,7 @@ CELERY_BROKER_URL = config("CELERY_BROKER_URL")
 CELERY_BEAT_SCHEDULE = {
     "run-weekly-withdrawals": {
         "task": "payments.signals.batch_process_withdrawals",
-        "schedule": crontab(
-            minute=5, hour=0, day_of_week="sun"
-        ),  # every hour on Sunday
+        "schedule": crontab(minute=0, hour="0-23", day_of_week="sun"),
     },
 }
 

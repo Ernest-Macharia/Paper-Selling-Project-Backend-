@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from exampapers.models import Order
+from payments import serializers
+from payments.emails import send_withdrawal_email_async
 from payments.serializers import WithdrawalRequestSerializer
 from payments.services.payment_verification import (
     verify_paypal_payment,
@@ -107,23 +109,57 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return WithdrawalRequest.objects.filter(user=self.request.user).order_by(
-            "-created_at"
-        )
+        user = self.request.user
+        status = self.request.query_params.get("status")
+        queryset = WithdrawalRequest.objects.filter(user=user).order_by("-created_at")
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
     def perform_create(self, serializer):
         user = self.request.user
         amount = serializer.validated_data["amount"]
-
-        # Deduct from wallet immediately
         wallet = user.wallet
-        wallet.available_balance -= amount
-        wallet.last_withdrawal_at = timezone.now()
-        wallet.save(update_fields=["available_balance", "last_withdrawal_at"])
 
-        # Create and optionally approve + disburse
+        profile = getattr(user, "userpayoutprofile", None)
+        if not profile or not profile.preferred_method:
+            raise serializers.ValidationError("You must set up a payout method first.")
+
+        if wallet.available_balance < amount:
+            raise serializers.ValidationError("Insufficient available balance.")
+
+        wallet.available_balance -= amount
+        wallet.total_withdrawn += amount
+        wallet.last_withdrawal_at = timezone.now()
+        wallet.save(
+            update_fields=["available_balance", "total_withdrawn", "last_withdrawal_at"]
+        )
+
         withdrawal = serializer.save(user=user, status="approved")
-        disburse_withdrawal(withdrawal)
+
+        send_withdrawal_email_async.delay(
+            user.id,
+            withdrawal.id,
+            "withdrawal_requested_email.html",
+            "Your GradesWorld Withdrawal Request",
+        )
+
+        result = disburse_withdrawal(withdrawal)
+
+        if result.get("status") != "success":
+            withdrawal.status = "failed"
+            withdrawal.save(update_fields=["status"])
+
+            send_withdrawal_email_async.delay(
+                user.id,
+                withdrawal.id,
+                "withdrawal_failed_email.html",
+                "Withdrawal Failed – GradesWorld",
+            )
+
+            raise serializers.ValidationError(
+                f"Withdrawal failed: {result.get('error')}"
+            )
 
 
 class WalletSummaryView(APIView):
@@ -189,3 +225,27 @@ def stripe_oauth_callback(request):
     baseUrl = settings.BASE_URL
     # Redirect back to the frontend (you can customize this)
     return HttpResponseRedirect(baseUrl + "/dashboard/earnings")
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_payout_info(request):
+    user = request.user
+    profile, _ = UserPayoutProfile.objects.get_or_create(user=user)
+
+    paypal_email = request.data.get("paypal_email")
+    mpesa_phone = request.data.get("mpesa_phone")
+
+    if paypal_email:
+        profile.paypal_email = paypal_email
+    if mpesa_phone:
+        profile.mpesa_phone = mpesa_phone
+
+    profile.save()
+    return Response(
+        {
+            "success": True,
+            "paypal_email": profile.paypal_email,
+            "mpesa_phone": profile.mpesa_phone,
+        }
+    )

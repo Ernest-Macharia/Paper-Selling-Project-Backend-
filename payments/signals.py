@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import timezone
 
 from celery import shared_task
 from django.db import transaction
@@ -69,8 +69,7 @@ def auto_create_withdrawal(sender, instance, created, **kwargs):
 @shared_task
 def batch_process_withdrawals():
     now = timezone.now()
-
-    if now.weekday() != 6:  # Sunday only
+    if now.weekday() != 6:  # Only run on Sunday
         return
 
     eligible_users = User.objects.filter(
@@ -79,17 +78,10 @@ def batch_process_withdrawals():
 
     for user in eligible_users:
         payout_profile = getattr(user, "userpayoutprofile", None)
-        wallet = user.wallet
-
-        recent_request = WithdrawalRequest.objects.filter(
-            user=user,
-            created_at__gte=now - timedelta(hours=24),
-            status__in=["pending", "processing"],
-        ).exists()
-
-        if not payout_profile or not payout_profile.preferred_method or recent_request:
+        if not payout_profile or not payout_profile.preferred_method:
             continue
 
+        wallet = user.wallet
         amount = wallet.available_balance
 
         with transaction.atomic():
@@ -105,6 +97,7 @@ def batch_process_withdrawals():
 
             wallet.available_balance = 0
             wallet.total_withdrawn += amount
+            wallet.last_withdrawal_at = now
             wallet.save()
 
             disburse_withdrawal(withdrawal)

@@ -5,7 +5,8 @@ from django.db import transaction
 from django.utils.timezone import now
 
 from mpesa_api.utils import get_mpesa_access_token, send_money_b2c
-from payments.models import Wallet, WithdrawalRequest
+from payments.emails import send_withdrawal_email_async
+from payments.models import WithdrawalRequest
 
 logger = logging.getLogger(__name__)
 
@@ -88,16 +89,20 @@ def disburse_mpesa(withdrawal):
         return {"status": "failed", "error": str(e)}
 
 
-def resolve_destination(withdrawal):
-    profile = getattr(withdrawal.user, "userpayoutprofile", None)
+def resolve_destination(withdrawal=None, *, user=None, method=None):
+    profile = getattr(
+        withdrawal.user if withdrawal else user, "userpayoutprofile", None
+    )
+    method = withdrawal.method if withdrawal else method
+
     if not profile:
         raise ValueError("Payout profile not found")
 
-    if withdrawal.method == "stripe":
+    if method == "stripe":
         return profile.stripe_account_id
-    elif withdrawal.method == "paypal":
+    elif method == "paypal":
         return profile.paypal_email
-    elif withdrawal.method == "mpesa":
+    elif method == "mpesa":
         return profile.mpesa_phone
     else:
         raise ValueError("Unsupported payout method")
@@ -105,19 +110,29 @@ def resolve_destination(withdrawal):
 
 @transaction.atomic
 def finalize_withdrawal(withdrawal, transaction_reference):
+    if withdrawal.status == "paid":
+        return
+
     withdrawal.status = "paid"
     withdrawal.paid_at = now()
     withdrawal.transaction_reference = transaction_reference
     withdrawal.save(update_fields=["status", "paid_at", "transaction_reference"])
 
-    # Deduct from Wallet
-    wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
-    if wallet.balance < withdrawal.amount:
-        raise ValueError("Insufficient wallet balance during payout finalization")
-    wallet.balance -= withdrawal.amount
-    wallet.save(update_fields=["balance"])
+    wallet = withdrawal.user.wallet
+    if wallet.available_balance >= withdrawal.amount:
+        wallet.available_balance -= withdrawal.amount
+
+    wallet.total_withdrawn += withdrawal.amount
+    wallet.last_withdrawal_at = now()
+    wallet.save()
 
     logger.info(f"Withdrawal {withdrawal.id} finalized for {withdrawal.user.email}")
+    send_withdrawal_email_async.delay(
+        withdrawal.user.id,
+        withdrawal.id,
+        "withdrawal_success_email.html",
+        "Withdrawal Successful – GradesWorld",
+    )
 
 
 def disburse_withdrawal(withdrawal: WithdrawalRequest):
