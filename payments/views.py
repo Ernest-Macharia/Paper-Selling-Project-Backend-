@@ -1,5 +1,8 @@
+import requests
+from django.conf import settings
+from django.http import HttpResponseRedirect, JsonResponse
 from django.utils import timezone
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -17,6 +20,8 @@ from stripe_api.models import StripePayment
 
 from .models import Payment, UserPayoutProfile, Wallet, WithdrawalRequest
 from .serializers import PaymentSerializer, WalletSummarySerializer
+
+DEFAULT_TIMEOUT = 60
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -135,16 +140,52 @@ class PayoutInfoView(APIView):
 
     def get(self, request):
         user = request.user
-        wallet, _ = Wallet.objects.get_or_create(user=user)
-        profile, _ = UserPayoutProfile.objects.get_or_create(user=user)
 
-        return Response(
-            {
-                "balance": wallet.available_balance,
-                "preferred_method": profile.preferred_method,
-                "paypal_email": profile.paypal_email,
-                "stripe_account_id": profile.stripe_account_id,
-                "mpesa_phone": profile.mpesa_phone,
-                "last_withdrawal_at": wallet.last_withdrawal_at,
-            }
-        )
+        try:
+            wallet, _ = Wallet.objects.get_or_create(user=user)
+            profile, _ = UserPayoutProfile.objects.get_or_create(user=user)
+
+            return Response(
+                {
+                    "balance": wallet.available_balance,
+                    "preferred_method": profile.preferred_method,
+                    "paypal_email": profile.paypal_email,
+                    "stripe_account_id": profile.stripe_account_id,
+                    "mpesa_phone": profile.mpesa_phone,
+                    "last_withdrawal_at": wallet.last_withdrawal_at,
+                }
+            )
+        except Exception as e:
+            # log this in production
+            return Response(
+                {"detail": f"Failed to load payout info: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+@permission_classes([IsAuthenticated])
+def stripe_oauth_callback(request):
+    code = request.GET.get("code")
+    if not code:
+        return JsonResponse({"error": "Missing code from Stripe"}, status=400)
+
+    data = {
+        "client_secret": settings.STRIPE_SECRET_KEY,
+        "code": code,
+        "grant_type": "authorization_code",
+    }
+
+    response = requests.post(
+        "https://connect.stripe.com/oauth/token", data=data, timeout=DEFAULT_TIMEOUT
+    )
+    if response.status_code != 200:
+        return JsonResponse({"error": "Failed to get Stripe account"}, status=400)
+
+    stripe_user_id = response.json().get("stripe_user_id")
+    UserPayoutProfile.objects.update_or_create(
+        user=request.user, defaults={"stripe_account_id": stripe_user_id}
+    )
+
+    baseUrl = settings.BASE_URL
+    # Redirect back to the frontend (you can customize this)
+    return HttpResponseRedirect(baseUrl + "/dashboard/earnings")

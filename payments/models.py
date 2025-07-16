@@ -93,10 +93,20 @@ class WithdrawalRequest(models.Model):
 
 
 class UserPayoutProfile(models.Model):
+    PAYOUT_METHODS = (
+        ("paypal", "PayPal"),
+        ("stripe", "Stripe"),
+        ("mpesa", "M-Pesa"),
+    )
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     paypal_email = models.EmailField(blank=True, null=True)
     stripe_account_id = models.CharField(max_length=255, blank=True, null=True)
     mpesa_phone = models.CharField(max_length=20, blank=True, null=True)
+
+    preferred_method = models.CharField(
+        max_length=20, choices=PAYOUT_METHODS, blank=True, null=True
+    )
 
 
 class OrganizationAccount(models.Model):

@@ -8,6 +8,7 @@ from payments.views import (
     PayoutInfoView,
     WalletSummaryView,
     WithdrawalRequestViewSet,
+    stripe_oauth_callback,
     verify_payment,
 )
 
@@ -25,6 +26,7 @@ urlpatterns = [
     path("payout-info/", PayoutInfoView.as_view(), name="payout-info"),
     # Refund API
     path("refund/<int:payment_id>/", refund_payment, name="refund_payment"),
+    path("stripe/oauth/callback/", stripe_oauth_callback, name="stripe-oauth-callback"),
     # Webhooks
     path("webhooks/stripe/", stripe_webhook, name="stripe_webhook"),
     path("webhooks/paypal/", paypal_webhook, name="paypal_webhook"),
