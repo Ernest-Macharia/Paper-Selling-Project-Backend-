@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from exampapers.utils.paper_helpers import generate_preview, set_page_count
 from payments.models import Wallet
 from users.models import User
 
@@ -155,7 +156,13 @@ class PaperUploadView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        # Save the paper first
+        paper = serializer.save(author=self.request.user)
+
+        # Then process page count and preview if file is present
+        if paper.file:
+            set_page_count(paper)
+            generate_preview(paper)
 
 
 class CategoryListView(generics.ListAPIView):
