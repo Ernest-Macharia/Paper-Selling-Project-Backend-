@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from django.conf import settings
 from django.http import HttpResponseRedirect, JsonResponse
@@ -22,6 +24,8 @@ from stripe_api.models import StripePayment
 
 from .models import Payment, UserPayoutProfile, Wallet, WithdrawalRequest
 from .serializers import PaymentSerializer, WalletSummarySerializer
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60
 
@@ -121,11 +125,21 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         amount = serializer.validated_data["amount"]
         wallet = user.wallet
 
+        logger.info(
+            f"Initiating withdrawal request for user {user.id} | amount: {amount}"
+        )
+
         profile = getattr(user, "userpayoutprofile", None)
         if not profile or not profile.preferred_method:
+            logger.warning(
+                f"User {user.id} has no payout profile or preferred method set"
+            )
             raise serializers.ValidationError("You must set up a payout method first.")
 
         if wallet.available_balance < amount:
+            logger.warning(
+                f"User {user.id} has insufficient balance: {wallet.available_balance} requested: {amount}"
+            )
             raise serializers.ValidationError("Insufficient available balance.")
 
         wallet.available_balance -= amount
@@ -136,6 +150,7 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         )
 
         withdrawal = serializer.save(user=user, status="approved")
+        logger.info(f"Withdrawal record created: ID {withdrawal.id} for user {user.id}")
 
         send_withdrawal_email_async.delay(
             user.id,
@@ -144,9 +159,12 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
             "Your GradesWorld Withdrawal Request",
         )
 
+        logger.debug(f"Calling disburse_withdrawal() for withdrawal ID {withdrawal.id}")
         result = disburse_withdrawal(withdrawal)
+        logger.debug(f"Disbursement result: {result}")
 
         if result.get("status") != "success":
+            logger.error(f"Withdrawal {withdrawal.id} failed: {result}")
             withdrawal.status = "failed"
             withdrawal.save(update_fields=["status"])
 
@@ -160,6 +178,8 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 f"Withdrawal failed: {result.get('error')}"
             )
+
+        logger.info(f"Withdrawal {withdrawal.id} completed successfully")
 
 
 class WalletSummaryView(APIView):
