@@ -74,7 +74,6 @@ class UserListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
 
-# Get current authenticated user's details
 class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]

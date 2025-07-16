@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from payments.models import Wallet
 from users.models import User
 
 from .models import (
@@ -277,6 +278,9 @@ class DashboardStatsView(APIView):
         user_reviews = Review.objects.filter(user=user).count()
         user_wishlist_count = Wishlist.objects.filter(user=user).count()
 
+        # ✅ Wallet Earnings
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+
         return Response(
             {
                 # 🌐 Platform-wide
@@ -295,11 +299,15 @@ class DashboardStatsView(APIView):
                 "user_papers_uploaded": user_papers.count(),
                 "user_total_downloads": user_downloaded_papers,
                 "user_total_views": user_views,
-                "user_total_earnings": float(user_earnings),
+                "user_total_earnings_from_papers": float(user_earnings),
                 "user_orders": user_orders.count(),
                 "user_completed_orders": user_orders.filter(status="completed").count(),
                 "user_review_count": user_reviews,
                 "user_wishlist_count": user_wishlist_count,
+                # 💰 Wallet Earnings
+                "wallet_total_earned": float(wallet.total_earned),
+                "wallet_total_withdrawn": float(wallet.total_withdrawn),
+                "wallet_available_balance": float(wallet.available_balance),
             }
         )
 
