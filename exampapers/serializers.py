@@ -103,11 +103,9 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_preview_url(self, obj):
         request = self.context.get("request")
-        return (
-            request.build_absolute_uri(obj.preview_file.url)
-            if obj.preview_file
-            else None
-        )
+        if obj.preview_file and request:
+            return request.build_absolute_uri(obj.preview_file.url)
+        return None
 
     def get_pages(self, obj):
         # Assuming a helper method exists to count PDF pages
