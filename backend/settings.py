@@ -47,6 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
 ]
 
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -56,17 +57,20 @@ LOGGING = {
             "class": "logging.FileHandler",
             "filename": os.path.join(BASE_DIR, "debug.log"),
         },
+        "console": {
+            "class": "logging.StreamHandler",
+        },
     },
     "loggers": {
         "django": {
-            "handlers": ["file"],
+            "handlers": ["file", "console"],
             "level": "DEBUG",
             "propagate": True,
         },
-        "payments": {
-            "handlers": ["file"],
-            "level": "DEBUG",
-            "propagate": True,
+        "django.request": {
+            "handlers": ["file", "console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }
