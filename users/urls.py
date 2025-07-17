@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from .views import (
+    Auth0LoginView,
     CurrentUserView,
     CustomLoginView,
     PasswordResetConfirmView,
@@ -38,4 +39,5 @@ urlpatterns = [
         name="resend_activation",
     ),
     path("activate/<uidb64>/<token>/", views.activate_user, name="activate_user"),
+    path("users/auth0-login/", Auth0LoginView.as_view(), name="auth0-login"),
 ]

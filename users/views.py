@@ -1,3 +1,4 @@
+import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -8,6 +9,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
+from jose import jwt
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -26,6 +28,8 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+DEFAULT_TIMEOUT = 60
 
 
 class RegisterUserView(generics.CreateAPIView):
@@ -203,3 +207,77 @@ def activate_user(request, uidb64, token):
 
     except (User.DoesNotExist, ValueError, TypeError):
         return JsonResponse({"error": "Invalid activation link."}, status=400)
+
+
+class Auth0LoginView(APIView):
+    def post(self, request):
+        token = request.data.get("token")
+
+        if not token:
+            return Response(
+                {"detail": "Token is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Verify the token with Auth0
+            jwks_url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
+            jwks = requests.get(jwks_url, timeout=DEFAULT_TIMEOUT).json()
+
+            unverified_header = jwt.get_unverified_header(token)
+            rsa_key = {}
+            for key in jwks["keys"]:
+                if key["kid"] == unverified_header["kid"]:
+                    rsa_key = {
+                        "kty": key["kty"],
+                        "kid": key["kid"],
+                        "use": key["use"],
+                        "n": key["n"],
+                        "e": key["e"],
+                    }
+
+            if not rsa_key:
+                return Response(
+                    {"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            payload = jwt.decode(
+                token,
+                rsa_key,
+                algorithms=settings.AUTH0_ALGORITHMS,
+                audience=settings.AUTH0_API_IDENTIFIER,
+                issuer=f"https://{settings.AUTH0_DOMAIN}/",
+            )
+
+            email = payload.get("email")
+            if not email:
+                return Response(
+                    {"detail": "Email not found in token"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Get or create user
+            user, created = User.objects.get_or_create(email=email)
+            if created:
+                user.first_name = payload.get("given_name", "")
+                user.last_name = payload.get("family_name", "")
+                user.set_unusable_password()
+                user.save()
+
+            # Generate tokens
+            refresh = RefreshToken.for_user(user)
+
+            return Response(
+                {
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                    },
+                }
+            )
+
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
