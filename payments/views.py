@@ -126,10 +126,10 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         wallet = user.wallet
         logger.debug(f"User {user.id} requested withdrawal of amount {amount}")
 
-        profile = getattr(user, "userpayoutprofile", None)
-        if not profile or not profile.preferred_method:
-            logger.warning(f"User {user.id} has no payout method set")
-            raise ValidationError("You must set up a payout method first.")
+        # profile = getattr(user, "userpayoutprofile", None)
+        # if not profile or not profile.preferred_method:
+        #     logger.warning(f"User {user.id} has no payout method set")
+        #     raise ValidationError("You must set up a payout method first.")
 
         if wallet.available_balance < amount:
             logger.warning(f"User {user.id} has insufficient balance")
