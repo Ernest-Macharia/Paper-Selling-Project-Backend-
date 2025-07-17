@@ -6,12 +6,12 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from exampapers.models import Order
-from payments import serializers
 from payments.emails import send_withdrawal_email_async
 from payments.serializers import WithdrawalRequestSerializer
 from payments.services.payment_verification import (
@@ -129,11 +129,11 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         profile = getattr(user, "userpayoutprofile", None)
         if not profile or not profile.preferred_method:
             logger.warning(f"User {user.id} has no payout method set")
-            raise serializers.ValidationError("You must set up a payout method first.")
+            raise ValidationError("You must set up a payout method first.")
 
         if wallet.available_balance < amount:
             logger.warning(f"User {user.id} has insufficient balance")
-            raise serializers.ValidationError("Insufficient available balance.")
+            raise ValidationError("Insufficient available balance.")
 
         wallet.available_balance -= amount
         wallet.total_withdrawn += amount
@@ -158,7 +158,7 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
             logger.info(f"Disbursement result for withdrawal {withdrawal.id}: {result}")
         except Exception:
             logger.exception(f"Disbursement crashed for withdrawal {withdrawal.id}")
-            raise serializers.ValidationError("Withdrawal disbursement failed.")
+            raise ValidationError("Withdrawal disbursement failed.")
 
         if result.get("status") != "success":
             withdrawal.status = "failed"
@@ -172,9 +172,7 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
                 "Withdrawal Failed – GradesWorld",
             )
 
-            raise serializers.ValidationError(
-                f"Withdrawal failed: {result.get('error')}"
-            )
+            raise ValidationError(f"Withdrawal failed: {result.get('error')}")
 
 
 class WalletSummaryView(APIView):
