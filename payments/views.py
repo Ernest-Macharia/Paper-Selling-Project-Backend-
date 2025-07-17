@@ -124,22 +124,15 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         amount = serializer.validated_data["amount"]
         wallet = user.wallet
-
-        logger.info(
-            f"Initiating withdrawal request for user {user.id} | amount: {amount}"
-        )
+        logger.debug(f"User {user.id} requested withdrawal of amount {amount}")
 
         profile = getattr(user, "userpayoutprofile", None)
         if not profile or not profile.preferred_method:
-            logger.warning(
-                f"User {user.id} has no payout profile or preferred method set"
-            )
+            logger.warning(f"User {user.id} has no payout method set")
             raise serializers.ValidationError("You must set up a payout method first.")
 
         if wallet.available_balance < amount:
-            logger.warning(
-                f"User {user.id} has insufficient balance: {wallet.available_balance} requested: {amount}"
-            )
+            logger.warning(f"User {user.id} has insufficient balance")
             raise serializers.ValidationError("Insufficient available balance.")
 
         wallet.available_balance -= amount
@@ -148,9 +141,10 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
         wallet.save(
             update_fields=["available_balance", "total_withdrawn", "last_withdrawal_at"]
         )
+        logger.debug(f"Updated wallet for user {user.id}")
 
         withdrawal = serializer.save(user=user, status="approved")
-        logger.info(f"Withdrawal record created: ID {withdrawal.id} for user {user.id}")
+        logger.info(f"Created withdrawal {withdrawal.id} for user {user.id}")
 
         send_withdrawal_email_async.delay(
             user.id,
@@ -159,14 +153,17 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
             "Your GradesWorld Withdrawal Request",
         )
 
-        logger.debug(f"Calling disburse_withdrawal() for withdrawal ID {withdrawal.id}")
-        result = disburse_withdrawal(withdrawal)
-        logger.debug(f"Disbursement result: {result}")
+        try:
+            result = disburse_withdrawal(withdrawal)
+            logger.info(f"Disbursement result for withdrawal {withdrawal.id}: {result}")
+        except Exception:
+            logger.exception(f"Disbursement crashed for withdrawal {withdrawal.id}")
+            raise serializers.ValidationError("Withdrawal disbursement failed.")
 
         if result.get("status") != "success":
-            logger.error(f"Withdrawal {withdrawal.id} failed: {result}")
             withdrawal.status = "failed"
             withdrawal.save(update_fields=["status"])
+            logger.error(f"Withdrawal {withdrawal.id} failed: {result.get('error')}")
 
             send_withdrawal_email_async.delay(
                 user.id,
@@ -178,8 +175,6 @@ class WithdrawalRequestViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 f"Withdrawal failed: {result.get('error')}"
             )
-
-        logger.info(f"Withdrawal {withdrawal.id} completed successfully")
 
 
 class WalletSummaryView(APIView):
