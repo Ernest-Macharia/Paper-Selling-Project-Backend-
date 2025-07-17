@@ -22,7 +22,7 @@ def get_mpesa_access_token():
 def send_money_b2c(phone_number, amount, access_token, remarks="", occasion="Payout"):
     url = (
         "https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest"
-        if settings.MPESA_ENV == "live"
+        if settings.ENVIRONMENT == "live"
         else "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest"
     )
 
