@@ -1,6 +1,5 @@
 import os
 from io import BytesIO
-from random import sample
 
 from django.core.files.base import ContentFile
 from PyPDF2 import PdfReader, PdfWriter
@@ -21,7 +20,7 @@ def set_page_count(paper):
 
 
 def generate_preview(paper):
-    """Generate a preview PDF with random pages or fallback to a default preview."""
+    """Generate a preview PDF with the first 4 pages or fallback to a default preview."""
     if not paper.file:
         return
 
@@ -45,10 +44,9 @@ def generate_preview(paper):
                 paper.save(update_fields=["page_count", "preview_file"])
                 return
 
-            # Pick up to 4 random pages
+            # Take the first 4 pages (or fewer if document has less than 4 pages)
             writer = PdfWriter()
-            indices = sorted(sample(range(total_pages), min(4, total_pages)))
-            for i in indices:
+            for i in range(min(4, total_pages)):
                 writer.add_page(reader.pages[i])
 
             buffer = BytesIO()
