@@ -1,14 +1,15 @@
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import ChatMessage, ContactMessage, EmailSubscriber
+from .models import ChatMessage, ContactMessage, CopyrightReport, EmailSubscriber
 from .serializers import (
     ChatMessageSerializer,
     ContactMessageSerializer,
+    CopyrightReportSerializer,
     EmailSubscriberSerializer,
 )
 
@@ -102,3 +103,14 @@ class ChatHistoryView(generics.ListAPIView):
     def get_queryset(self):
         room = self.kwargs["room"]
         return ChatMessage.objects.filter(room=room).order_by("timestamp")
+
+
+class CopyrightReportCreateView(generics.CreateAPIView):
+    queryset = CopyrightReport.objects.all()
+    serializer_class = CopyrightReportSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(
+            reporter=self.request.user if self.request.user.is_authenticated else None
+        )

@@ -1,5 +1,8 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+
+from exampapers.models import Paper
 
 User = get_user_model()
 
@@ -40,3 +43,36 @@ class Notification(models.Model):
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+
+class CopyrightReport(models.Model):
+    REASON_CHOICES = [
+        ("copyright", "Copyright infringement"),
+        ("plagiarism", "Plagiarism"),
+        ("unauthorized", "Unauthorized distribution"),
+        ("other", "Other"),
+    ]
+
+    paper = models.ForeignKey(
+        Paper, on_delete=models.CASCADE, related_name="copyright_reports"
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
+    details = models.TextField()
+    contact_email = models.EmailField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("reviewed", "Reviewed"),
+            ("dismissed", "Dismissed"),
+        ],
+        default="pending",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Report on {self.paper.title} ({self.get_reason_display()})"

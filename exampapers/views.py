@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from django.conf import settings
@@ -5,7 +6,9 @@ from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, F, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
 from django.utils.timezone import now
+from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions
 from rest_framework.generics import ListAPIView
@@ -35,6 +38,8 @@ from .serializers import (
     PaperSerializer,
     SchoolSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PaperFilterMixin:
@@ -80,6 +85,15 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
 class UserUploadsView(generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["status"]
+    search_fields = ["title", "description"]
+    ordering_fields = ["upload_date", "title", "views", "downloads"]
+    ordering = ["-upload_date"]
 
     def get_queryset(self):
         return Paper.objects.filter(author=self.request.user).select_related(
@@ -399,3 +413,43 @@ class ReceivedReviewsListAPIView(generics.ListAPIView):
         return Review.objects.filter(paper__author=self.request.user).order_by(
             "-created_at"
         )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PaperUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = Paper.objects.all()
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "pk"
+
+    http_method_names = ["get", "put", "patch", "head", "options"]
+
+    def perform_update(self, serializer):
+        # Ensure only the author can update the paper
+        paper = self.get_object()
+        if paper.author != self.request.user:
+            raise permissions.PermissionDenied("You can only edit your own papers.")
+        serializer.save()
+
+
+class PaperDeleteView(generics.DestroyAPIView):
+    queryset = Paper.objects.all()
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "pk"
+
+    def perform_destroy(self, instance):
+        # Ensure only the author can delete the paper
+        if instance.author != self.request.user:
+            raise permissions.PermissionDenied("You can only delete your own papers.")
+
+        # Delete associated files safely
+        try:
+            if instance.file and hasattr(instance.file, "url"):
+                instance.file.delete(save=False)
+            if hasattr(instance, "preview_file") and instance.preview_file:
+                instance.preview_file.delete(save=False)
+        except Exception as e:
+            logger.error(f"Error deleting files for paper {instance.id}: {str(e)}")
+
+        instance.delete()

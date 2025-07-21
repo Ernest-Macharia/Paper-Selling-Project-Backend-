@@ -20,7 +20,10 @@ def set_page_count(paper):
 
 
 def generate_preview(paper):
-    """Generate a preview PDF with the first 4 pages or fallback to a default preview."""
+    """Generate a preview PDF with:
+    - 2 pages for documents with less than 10 pages
+    - 4 pages for documents with 10+ pages
+    - fallback to default preview for empty/small documents"""
     if not paper.file:
         return
 
@@ -30,7 +33,8 @@ def generate_preview(paper):
             total_pages = len(reader.pages)
             paper.page_count = total_pages
 
-            if total_pages < 6:
+            # For very small documents (less than 2 pages), use default preview
+            if total_pages < 2:
                 default_preview_path = os.path.join(
                     "media", "previews", "no_preview.pdf"
                 )
@@ -44,9 +48,13 @@ def generate_preview(paper):
                 paper.save(update_fields=["page_count", "preview_file"])
                 return
 
-            # Take the first 4 pages (or fewer if document has less than 4 pages)
             writer = PdfWriter()
-            for i in range(min(4, total_pages)):
+
+            # Determine how many pages to include in preview
+            preview_page_count = 4 if total_pages >= 10 else 2
+
+            # Add the determined number of pages
+            for i in range(min(preview_page_count, total_pages)):
                 writer.add_page(reader.pages[i])
 
             buffer = BytesIO()
