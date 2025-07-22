@@ -1,9 +1,11 @@
 import logging
+import os
 from datetime import datetime
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, F, Q, Sum
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
@@ -376,14 +378,25 @@ class PaperDownloadView(APIView):
                 {"detail": "You have not purchased this paper."}, status=403
             )
 
+        # Create download record
         PaperDownload.objects.create(
             user=request.user, paper=paper, ip_address=self.get_client_ip(request)
         )
 
+        # Increment download count
+        paper.increment_downloads()
+
         # Send email notification
         self.send_download_email(request.user, paper)
 
-        return Response({"file_url": request.build_absolute_uri(paper.file.url)})
+        # Return the original file (now pre-watermarked during upload)
+        response = FileResponse(
+            paper.file.open("rb"),
+            content_type="application/pdf",
+            as_attachment=True,
+            filename=os.path.basename(paper.file.name),
+        )
+        return response
 
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")

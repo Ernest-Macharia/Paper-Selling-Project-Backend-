@@ -8,6 +8,7 @@ from django.utils.timezone import now
 from pypdf import PdfReader, PdfWriter
 
 from backend import settings
+from exampapers.utils.paper_helpers import add_watermark_to_pdf
 
 
 class Category(models.Model):
@@ -136,6 +137,33 @@ class Paper(models.Model):
             os.path.splitext(os.path.basename(self.file.name))[0] + "_preview.pdf"
         )
         self.preview_file.save(preview_name, ContentFile(buffer.read()), save=False)
+
+    def save(self, *args, **kwargs):
+        # Process watermarking only if a file is uploaded
+        if self.file:
+            try:
+                original_file = Paper.objects.get(pk=self.pk).file if self.pk else None
+            except Paper.DoesNotExist:
+                original_file = None
+
+            if not original_file or original_file.name != self.file.name:
+                # Create watermarked version
+                watermarked_buffer = add_watermark_to_pdf(self.file.open("rb"))
+
+                # Generate new filename
+                original_name = os.path.basename(self.file.name)
+                if not original_name.startswith("watermarked_"):
+                    original_name = f"watermarked_{original_name}"
+
+                # Save watermarked file to instance (not to DB yet)
+                self.file.save(
+                    original_name,
+                    ContentFile(watermarked_buffer.getvalue()),
+                    save=False,
+                )
+
+        # Final save (single point of saving to DB)
+        super().save(*args, **kwargs)
 
 
 class Review(models.Model):
