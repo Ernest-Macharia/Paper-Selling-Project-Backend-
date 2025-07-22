@@ -1,12 +1,11 @@
 import logging
 import os
-import tempfile
 from io import BytesIO
 from typing import BinaryIO, Optional, Union
 
 from django.core.files.base import ContentFile
 from pdf2image import convert_from_bytes
-from PyPDF2 import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -36,20 +35,11 @@ def set_page_count(paper) -> None:
 
 
 def generate_preview(self) -> None:
-    """Generate a responsive preview PDF optimized for all devices.
-
-    Rules:
-    - No preview for papers with less than 6 pages
-    - 1 page preview for papers with 6-9 pages
-    - 2 page preview for papers with 10-49 pages
-    - 3 page preview for papers with 50+ pages
-
-    Additional improvements:
-    - Converts to A4 size for consistency
-    - Adds mobile-friendly margins
-    - Generates fallback images for devices that can't preview PDFs
-    """
+    """Generate a responsive preview PDF optimized for all devices using pypdf."""
     if not self.file:
+        logger.warning(
+            f"No file found for paper {self.id}, skipping preview generation"
+        )
         return
 
     try:
@@ -57,92 +47,80 @@ def generate_preview(self) -> None:
             reader = PdfReader(f)
             total_pages = len(reader.pages)
 
-            # Determine how many pages to include in preview
             if total_pages < 6:
-                return  # No preview for very short papers
-            elif total_pages < 10:
-                preview_pages = 1
-            elif total_pages < 50:
-                preview_pages = 2
-            else:
-                preview_pages = 3
+                logger.info(
+                    f"Paper {self.id} has only {total_pages} pages, skipping preview"
+                )
+                return
+
+            preview_pages = 1 if total_pages < 10 else (2 if total_pages < 50 else 3)
 
             writer = PdfWriter()
 
-            # Add the determined number of pages with mobile optimization
-            for page in reader.pages[:preview_pages]:
-                # Create a new page with proper dimensions and margins
-                new_page = writer.add_blank_page(
-                    width=595,  # A4 width in points (210mm)
-                    height=842,  # A4 height in points (297mm)
-                )
+            for i in range(min(preview_pages, total_pages)):
+                page = reader.pages[i]
+                orig_width = float(page.mediabox.width)
+                orig_height = float(page.mediabox.height)
+                scale = min((595 - 40) / orig_width, (842 - 40) / orig_height)
 
-                # Scale and center the original page with margins
-                original_width = float(page.mediabox[2])
-                original_height = float(page.mediabox[3])
+                # Create new blank page
+                writer.add_blank_page(width=595, height=842)
+                # Get the last added page
+                new_page = writer.pages[-1]
 
-                # Calculate scaling factor to fit within A4 with margins
-                margin = 20  # points
-                max_width = 595 - (2 * margin)
-                max_height = 842 - (2 * margin)
-
-                width_ratio = max_width / original_width
-                height_ratio = max_height / original_height
-                scale = min(width_ratio, height_ratio)
-
-                # Center the scaled page
-                x_offset = (595 - (original_width * scale)) / 2
-                y_offset = (842 - (original_height * scale)) / 2
-
-                # Merge the scaled page
-                page.scale(scale, scale)
-                new_page.merge_page(page)
+                # Merge with transformation
                 new_page.merge_transformed_page(
-                    page, (scale, 0, 0, scale, x_offset, y_offset), expand=True
+                    page,
+                    (
+                        scale,
+                        0,
+                        0,
+                        scale,
+                        (595 - orig_width * scale) / 2,
+                        (842 - orig_height * scale) / 2,
+                    ),
                 )
 
-            # Write to memory
-            buffer = BytesIO()
-            writer.write(buffer)
-            buffer.seek(0)
+            # Save preview to BytesIO buffer first
+            pdf_buffer = BytesIO()
+            writer.write(pdf_buffer)
+            pdf_buffer.seek(0)
 
-            # Save to preview_file
-            preview_name = (
-                os.path.splitext(os.path.basename(self.file.name))[0] + "_preview.pdf"
-            )
+            # Save to model field
+            preview_name = f"previews/{self.id}_{os.path.basename(self.file.name)}"
             self.preview_file.save(
-                preview_name, ContentFile(buffer.getvalue()), save=False
+                preview_name, ContentFile(pdf_buffer.getvalue()), save=False
             )
 
-            # Generate fallback image for mobile devices
-            self._generate_preview_image(buffer)
+            # Generate preview image from the buffer
+            self._generate_preview_image(pdf_buffer)
 
             self.save(update_fields=["preview_file", "preview_image"])
+
     except Exception as e:
-        logger.error(f"Error generating preview for paper {self.id}: {str(e)}")
+        logger.error(f"Failed to generate preview for paper {self.id}: {str(e)}")
+        raise
 
 
 def _generate_preview_image(self, pdf_buffer: BytesIO) -> None:
     """Generate a fallback image preview for mobile devices."""
     try:
-
         # Convert first page to image
         images = convert_from_bytes(
             pdf_buffer.getvalue(), dpi=100, first_page=1, last_page=1, fmt="jpeg"
         )
 
         if images:
-            with tempfile.NamedTemporaryFile(suffix=".jpg") as temp_img:
-                images[0].save(temp_img, format="JPEG", quality=85)
-                temp_img.seek(0)
+            img_buffer = BytesIO()
+            images[0].save(img_buffer, format="JPEG", quality=85)
+            img_buffer.seek(0)
 
-                preview_image_name = (
-                    os.path.splitext(os.path.basename(self.file.name))[0]
-                    + "_preview.jpg"
-                )
-                self.preview_image.save(
-                    preview_image_name, ContentFile(temp_img.read()), save=False
-                )
+            preview_image_name = (
+                os.path.splitext(os.path.basename(self.file.name))[0] + "_preview.jpg"
+            )
+            self.preview_image.save(
+                preview_image_name, ContentFile(img_buffer.getvalue()), save=False
+            )
     except Exception as e:
         logger.warning(f"Couldn't generate image preview: {str(e)}")
 

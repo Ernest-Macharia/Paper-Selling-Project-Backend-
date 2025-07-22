@@ -1,3 +1,4 @@
+import logging
 import os
 from io import BytesIO
 
@@ -5,10 +6,13 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.text import slugify
 from django.utils.timezone import now
+from pdf2image import convert_from_bytes
 from pypdf import PdfReader, PdfWriter
 
 from backend import settings
 from exampapers.utils.paper_helpers import add_watermark_to_pdf
+
+logger = logging.getLogger(__name__)
 
 
 class Category(models.Model):
@@ -68,6 +72,9 @@ class Paper(models.Model):
     description = models.TextField(blank=True)
     file = models.FileField(upload_to="papers/")
     preview_file = models.FileField(upload_to="previews/", blank=True, null=True)
+    preview_image = models.ImageField(
+        upload_to="preview_images/", blank=True, null=True
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -121,29 +128,108 @@ class Paper(models.Model):
         self.views += 1
         self.save(update_fields=["views"])
 
-    def generate_preview(self):
+    def set_page_count(self) -> None:
+        """Set the number of pages for this Paper."""
         if not self.file:
             return
 
-        # Read original PDF
-        self.file.seek(0)
-        reader = PdfReader(self.file)
-        writer = PdfWriter()
+        try:
+            with self.file.open("rb") as f:
+                reader = PdfReader(f)
+                self.page_count = len(reader.pages)
+        except Exception as e:
+            raise RuntimeError(f"Failed to set page count: {e}")
 
-        # Add first 5 pages (or fewer if shorter)
-        for page in reader.pages[:5]:
-            writer.add_page(page)
+    def generate_preview(self) -> None:
+        """Generate preview PDF and image for this Paper."""
+        if not self.file:
+            logger.warning(
+                f"No file found for paper {self.id}, skipping preview generation"
+            )
+            return
 
-        # Write to memory
-        buffer = BytesIO()
-        writer.write(buffer)
-        buffer.seek(0)
+        try:
+            # Ensure the file exists in storage
+            if not self.file.storage.exists(self.file.name):
+                logger.error(f"File {self.file.name} doesn't exist in storage")
+                return
 
-        # Save to preview_file
-        preview_name = (
-            os.path.splitext(os.path.basename(self.file.name))[0] + "_preview.pdf"
-        )
-        self.preview_file.save(preview_name, ContentFile(buffer.read()), save=False)
+            with self.file.open("rb") as f:
+                # Verify the file is a valid PDF
+                try:
+                    reader = PdfReader(f)
+                    total_pages = len(reader.pages)
+                except Exception as e:
+                    logger.error(f"Invalid PDF file for paper {self.id}: {str(e)}")
+                    return
+
+                if total_pages < 1:
+                    logger.info(f"Paper {self.id} has no pages, skipping preview")
+                    return
+
+                preview_pages = min(3, total_pages)  # Get up to 3 pages
+
+                writer = PdfWriter()
+
+                for i in range(preview_pages):
+                    page = reader.pages[i]
+                    orig_width = float(page.mediabox.width)
+                    orig_height = float(page.mediabox.height)
+                    scale = min((595 - 40) / orig_width, (842 - 40) / orig_height)
+
+                    writer.add_blank_page(width=595, height=842)
+                    new_page = writer.pages[-1]
+
+                    new_page.merge_transformed_page(
+                        page,
+                        (
+                            scale,
+                            0,
+                            0,
+                            scale,
+                            (595 - orig_width * scale) / 2,
+                            (842 - orig_height * scale) / 2,
+                        ),
+                    )
+
+                pdf_buffer = BytesIO()
+                writer.write(pdf_buffer)
+                pdf_buffer.seek(0)
+
+                # Generate preview file name
+                preview_name = f"previews/{self.id}_{os.path.basename(self.file.name)}"
+                self.preview_file.save(
+                    preview_name, ContentFile(pdf_buffer.getvalue()), save=False
+                )
+
+                # Generate preview image
+                self._generate_preview_image(pdf_buffer)
+
+        except Exception as e:
+            logger.error(
+                f"Failed to generate preview for paper {self.id}: {str(e)}",
+                exc_info=True,
+            )
+            raise
+
+    def _generate_preview_image(self, pdf_buffer: BytesIO) -> None:
+        """Generate a fallback image preview for mobile devices."""
+        try:
+            images = convert_from_bytes(
+                pdf_buffer.getvalue(), dpi=100, first_page=1, last_page=1, fmt="jpeg"
+            )
+
+            if images:
+                img_buffer = BytesIO()
+                images[0].save(img_buffer, format="JPEG", quality=85)
+                img_buffer.seek(0)
+
+                preview_image_name = f"{os.path.splitext(os.path.basename(self.file.name))[0]}_preview.jpg"
+                self.preview_image.save(
+                    preview_image_name, ContentFile(img_buffer.getvalue()), save=False
+                )
+        except Exception as e:
+            logger.warning(f"Couldn't generate image preview: {str(e)}")
 
     def save(self, *args, **kwargs):
         # Process watermarking only if a file is uploaded

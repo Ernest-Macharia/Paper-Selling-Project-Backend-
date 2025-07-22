@@ -19,7 +19,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from exampapers.utils.paper_helpers import generate_preview, set_page_count
 from payments.models import Wallet
 from users.models import User
 
@@ -177,13 +176,31 @@ class PaperUploadView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Save the paper first
-        paper = serializer.save(author=self.request.user)
+        try:
+            paper = serializer.save(author=self.request.user)
 
-        # Then process page count and preview if file is present
-        if paper.file:
-            set_page_count(paper)
-            generate_preview(paper)
+            if paper.file:
+                # Verify storage is writable
+                from django.core.files.storage import default_storage
+
+                if not default_storage.exists(paper.file.name):
+                    raise ValueError("File storage not accessible")
+
+                # Call the model methods with better error handling
+                try:
+                    paper.set_page_count()
+                    paper.generate_preview()
+                    paper.save()
+                except Exception as e:
+                    logger.error(
+                        f"Error generating preview for paper {paper.id}: {str(e)}"
+                    )
+                    # You might want to raise this or handle it differently
+                    raise
+
+        except Exception as e:
+            logger.error(f"Paper upload failed: {str(e)}", exc_info=True)
+            raise
 
 
 class CategoryListView(generics.ListAPIView):

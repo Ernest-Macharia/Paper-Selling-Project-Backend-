@@ -80,6 +80,7 @@ class PaperSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.IntegerField(source="reviews.count", read_only=True)
     preview_url = serializers.SerializerMethodField()
+    preview_image = serializers.SerializerMethodField()
     download_count = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
@@ -108,6 +109,7 @@ class PaperSerializer(serializers.ModelSerializer):
             "file",
             "preview_file",
             "preview_url",
+            "preview_image",
             "price",
             "status",
             "category",
@@ -144,6 +146,7 @@ class PaperSerializer(serializers.ModelSerializer):
             "document_url",
             "preview_url",
             "preview_file",
+            "preview_image",
             "author_info",
         ]
         extra_kwargs = {"preview_file": {"read_only": True}}
@@ -156,7 +159,7 @@ class PaperSerializer(serializers.ModelSerializer):
         try:
             user = request.user
             if obj.is_free:
-                if obj.file and hasattr(obj.file, "url"):  # Add safety check
+                if obj.file and hasattr(obj.file, "url"):
                     return request.build_absolute_uri(obj.file.url)
                 return None
 
@@ -177,11 +180,36 @@ class PaperSerializer(serializers.ModelSerializer):
 
     def get_preview_url(self, obj):
         request = self.context.get("request")
+        if not request:
+            return None
+
         try:
-            if hasattr(obj, "preview_file") and obj.preview_file and request:
-                return request.build_absolute_uri(obj.preview_file.url)
+            if obj.preview_file and hasattr(obj.preview_file, "url"):
+                url = obj.preview_file.url
+                if not url.startswith(("http://", "https://")):
+                    return request.build_absolute_uri(url)
+                return url
+            logger.warning(f"No preview file found for paper {obj.id}")
         except Exception as e:
             logger.error(f"Error generating preview URL for paper {obj.id}: {str(e)}")
+        return None
+
+    def get_preview_image(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return None
+
+        try:
+            if obj.preview_image and hasattr(obj.preview_image, "url"):
+                url = obj.preview_image.url
+                if not url.startswith(("http://", "https://")):
+                    return request.build_absolute_uri(url)
+                return url
+            logger.warning(f"No preview image found for paper {obj.id}")
+        except Exception as e:
+            logger.error(
+                f"Error generating preview image URL for paper {obj.id}: {str(e)}"
+            )
         return None
 
     def get_pages(self, obj):
@@ -224,15 +252,18 @@ class PaperSerializer(serializers.ModelSerializer):
         return request and request.user == obj.author
 
     def create(self, validated_data):
-        # Set the author to the current user
         validated_data["author"] = self.context["request"].user
         paper = super().create(validated_data)
 
-        # Process file if provided
         if paper.file:
-            set_page_count(paper)
-            generate_preview(paper)
-            paper.save()
+            try:
+                set_page_count(paper)
+                generate_preview(paper)
+                paper.save(
+                    update_fields=["page_count", "preview_file", "preview_image"]
+                )
+            except Exception as e:
+                logger.error(f"Failed to process paper file: {str(e)}")
 
         return paper
 
