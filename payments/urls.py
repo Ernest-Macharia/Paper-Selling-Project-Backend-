@@ -12,6 +12,7 @@ from payments.views import (
     update_payout_info,
     verify_payment,
 )
+from payments.webhooks.paystack_webhooks import handle_paystack_webhook
 
 router = DefaultRouter()
 router.register(r"withdrawals", WithdrawalRequestViewSet, basename="withdrawal")
@@ -33,6 +34,7 @@ urlpatterns = [
     path("webhooks/stripe/", stripe_webhook, name="stripe_webhook"),
     path("webhooks/paypal/", paypal_webhook, name="paypal_webhook"),
     path("webhooks/mpesa/", mpesa_webhook, name="mpesa_webhook"),
+    path("webhooks/paystack/", handle_paystack_webhook),
     path("wallet/summary/", WalletSummaryView.as_view(), name="wallet-summary"),
     path("", include(router.urls)),
 ]

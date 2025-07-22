@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     "stripe_api",
     "payments",
     "communications",
+    "paystack",
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",

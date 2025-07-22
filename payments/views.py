@@ -16,26 +16,20 @@ from payments.emails import send_withdrawal_email_async
 from payments.serializers import WithdrawalRequestSerializer
 from payments.services.payment_verification import (
     verify_paypal_payment,
+    verify_paystack_payment,
     verify_stripe_payment,
 )
 from payments.services.payout_service import disburse_withdrawal
-from paypal_api.models import PayPalPayment
-from stripe_api.models import StripePayment
 
-from .models import Payment, UserPayoutProfile, Wallet, WithdrawalRequest
-from .serializers import PaymentSerializer, WalletSummarySerializer
+from .models import UserPayoutProfile, Wallet, WithdrawalRequest
+from .serializers import WalletSummarySerializer
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.select_related("order").prefetch_related("order__papers")
-    serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
-
-
+# payments/views.py
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def verify_payment(request):
@@ -43,6 +37,7 @@ def verify_payment(request):
         request.query_params.get("session_id")
         or request.query_params.get("paymentId")
         or request.query_params.get("token")
+        or request.query_params.get("reference")
     )
     order_id = request.query_params.get("order_id")
 
@@ -50,7 +45,7 @@ def verify_payment(request):
         return Response({"detail": "Missing order_id."}, status=400)
 
     if not session_id:
-        return Response({"detail": "Missing session_id."}, status=400)
+        return Response({"detail": "Missing payment reference."}, status=400)
 
     try:
         order = Order.objects.get(id=order_id)
@@ -66,29 +61,12 @@ def verify_payment(request):
                 }
             )
 
-        if session_id:
-            if session_id.startswith("cs_"):
-                success = verify_stripe_payment(session_id, order)
-            else:
-                success = verify_paypal_payment(session_id, order)
+        if session_id.startswith("cs_"):
+            success = verify_stripe_payment(session_id, order)
+        elif session_id.startswith("ORDER_"):
+            success = verify_paystack_payment(session_id, order)
         else:
-            # Try to get StripePayment
-            stripe_record = StripePayment.objects.filter(payment__order=order).first()
-            if stripe_record:
-                session_id = stripe_record.session_id
-                success = verify_stripe_payment(session_id, order)
-            else:
-                # Fallback to PayPal
-                paypal_record = PayPalPayment.objects.filter(
-                    payment__order=order
-                ).first()
-                if not paypal_record:
-                    return Response(
-                        {"success": False, "error": "No payment session found."},
-                        status=400,
-                    )
-                session_id = paypal_record.paypal_order_id
-                success = verify_paypal_payment(session_id, order)
+            success = verify_paypal_payment(session_id, order)
 
         return Response(
             {

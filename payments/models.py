@@ -66,6 +66,7 @@ class WithdrawalRequest(models.Model):
         ("paypal", "PayPal"),
         ("stripe", "Stripe"),
         ("mpesa", "M-Pesa"),
+        ("Paystack", "Paystack"),
     )
 
     STATUS_CHOICES = (
@@ -97,6 +98,7 @@ class UserPayoutProfile(models.Model):
         ("paypal", "PayPal"),
         ("stripe", "Stripe"),
         ("mpesa", "M-Pesa"),
+        ("Paystack", "Paystack"),
     )
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

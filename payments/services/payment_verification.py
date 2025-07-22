@@ -64,3 +64,32 @@ def verify_paypal_payment(session_id, order):
 
     logger.warning(f"[PayPal] Order {payment_id} status is not COMPLETED")
     return False
+
+
+def verify_paystack_payment(reference, order):
+    headers = {
+        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.get(
+            f"{settings.PAYSTACK_API_URL}/transaction/verify/{reference}",
+            headers=headers,
+            timeout=DEFAULT_TIMEOUT,
+        )
+
+        if response.status_code != 200:
+            logger.error(f"Paystack verification error: {response.text}")
+            return False
+
+        data = response.json()
+        if data["data"]["status"] == "success":
+            order.status = "completed"
+            order.save(update_fields=["status"])
+            return True
+
+    except Exception as e:
+        logger.exception("Error during Paystack payment verification: %s", e)
+
+    return False
