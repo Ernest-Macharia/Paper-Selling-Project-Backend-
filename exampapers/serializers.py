@@ -132,6 +132,7 @@ class PaperSerializer(serializers.ModelSerializer):
             "is_free",
             "can_edit",
             "can_delete",
+            "year",
         ]
         read_only_fields = [
             "id",

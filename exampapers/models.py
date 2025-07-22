@@ -101,6 +101,13 @@ class Paper(models.Model):
     )
     page_count = models.IntegerField(null=True, blank=True)
 
+    year = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+        help_text="Academic year format: YYYY/YYYY (e.g., 2023/2024)",
+    )
+
     def __str__(self):
         return self.title
 
