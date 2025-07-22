@@ -3,6 +3,7 @@ from io import BytesIO
 
 from django.core.files.base import ContentFile
 from django.db import models
+from django.utils.text import slugify
 from django.utils.timezone import now
 from pypdf import PdfReader, PdfWriter
 
@@ -17,17 +18,36 @@ class Category(models.Model):
         return self.name
 
 
-class Course(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True)
-
-    def __str__(self):
-        return self.name
-
-
 class School(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.country})"
+
+
+class Course(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    schools = models.ManyToManyField(School, related_name="courses")
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
