@@ -159,7 +159,9 @@ class MostViewedPapersView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Paper.objects.filter(status="published").order_by("-views")
+        return Paper.objects.filter(
+            status="published", author=self.request.user
+        ).order_by("-views")
 
 
 class LatestUserPapersView(ListAPIView):
