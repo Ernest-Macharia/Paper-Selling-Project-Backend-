@@ -155,7 +155,6 @@ class Paper(models.Model):
                 return
 
             with self.file.open("rb") as f:
-                # Verify the file is a valid PDF
                 try:
                     reader = PdfReader(f)
                     total_pages = len(reader.pages)
@@ -167,7 +166,21 @@ class Paper(models.Model):
                     logger.info(f"Paper {self.id} has no pages, skipping preview")
                     return
 
-                preview_pages = min(3, total_pages)  # Get up to 3 pages
+                # Determine how many preview pages to generate
+                if total_pages < 5:
+                    preview_pages = 0
+                elif total_pages < 20:
+                    preview_pages = min(2, total_pages)
+                else:
+                    preview_pages = min(4, total_pages)
+
+                if preview_pages == 0:
+                    logger.info(
+                        f"Paper {self.id} has less than 5 pages, skipping PDF preview generation"
+                    )
+                    f.seek(0)
+                    self._generate_preview_image(BytesIO(f.read()))
+                    return
 
                 writer = PdfWriter()
 
@@ -196,13 +209,12 @@ class Paper(models.Model):
                 writer.write(pdf_buffer)
                 pdf_buffer.seek(0)
 
-                # Generate preview file name
                 preview_name = f"previews/{self.id}_{os.path.basename(self.file.name)}"
                 self.preview_file.save(
                     preview_name, ContentFile(pdf_buffer.getvalue()), save=False
                 )
 
-                # Generate preview image
+                # Generate image from the first page
                 self._generate_preview_image(pdf_buffer)
 
         except Exception as e:
@@ -221,6 +233,7 @@ class Paper(models.Model):
 
             if images:
                 img_buffer = BytesIO()
+                images[0] = images[0].convert("RGB")
                 images[0].save(img_buffer, format="JPEG", quality=85)
                 img_buffer.seek(0)
 
