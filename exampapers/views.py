@@ -11,8 +11,9 @@ from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import ChoiceFilter, DjangoFilterBackend, FilterSet
 from rest_framework import filters, generics, permissions
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -154,22 +155,66 @@ class PaperDetailView(APIView):
         return Response(serializer.data)
 
 
+class PaperFilter(FilterSet):
+    price = ChoiceFilter(
+        choices=[("free", "Free"), ("paid", "Paid")],
+        method="filter_price",
+        label="Price Type",
+    )
+    status = ChoiceFilter(
+        choices=[
+            ("published", "Published"),
+            ("pending", "Pending"),
+            ("rejected", "Rejected"),
+        ]
+    )
+
+    class Meta:
+        model = Paper
+        fields = ["price", "status"]
+
+    def filter_price(self, queryset, name, value):
+        if value == "free":
+            return queryset.filter(price=0)
+        elif value == "paid":
+            return queryset.filter(price__gt=0)
+        return queryset
+
+
 class MostViewedPapersView(ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = PaperFilter
+    search_fields = ["title", "course__name", "category__name"]
+    ordering_fields = ["views", "download_count", "upload_date"]
+    ordering = ["-views"]
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        return Paper.objects.filter(
-            status="published", author=self.request.user
-        ).order_by("-views")
+        return (
+            Paper.objects.filter(status="published", author=self.request.user)
+            .select_related("course", "category")
+            .annotate(download_count=Count("downloads"))
+        )
 
 
 class LatestUserPapersView(ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = PaperFilter
+    search_fields = ["title", "course__name", "category__name"]
+    ordering_fields = ["upload_date", "views", "download_count"]
+    ordering = ["-upload_date"]
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        return Paper.objects.filter(author=self.request.user).order_by("-upload_date")
+        return (
+            Paper.objects.filter(author=self.request.user)
+            .select_related("course", "category")
+            .annotate(download_count=Count("downloads"))
+        )
 
 
 class PaperUploadView(generics.CreateAPIView):
