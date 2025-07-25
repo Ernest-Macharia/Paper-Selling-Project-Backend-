@@ -25,6 +25,7 @@ class CourseSerializer(serializers.ModelSerializer):
     average_price = serializers.FloatField(read_only=True)
     average_rating = serializers.FloatField(read_only=True)
     category = serializers.CharField(read_only=True)
+    school_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Course
@@ -35,13 +36,57 @@ class CourseSerializer(serializers.ModelSerializer):
             "category",
             "average_price",
             "average_rating",
+            "school_name",
         ]
 
 
 class SchoolSerializer(serializers.ModelSerializer):
+    paper_count = serializers.SerializerMethodField()
+    course_count = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    total_downloads = serializers.SerializerMethodField()
+
     class Meta:
         model = School
-        fields = ["id", "name"]
+        fields = [
+            "id",
+            "name",
+            "country",
+            "website",
+            "is_active",
+            "paper_count",
+            "course_count",
+            "average_rating",
+            "total_downloads",
+            "slug",
+        ]
+        read_only_fields = ["slug"]
+
+    def get_paper_count(self, obj):
+        # Count of published papers for this school
+        return obj.papers.filter(status="published").count()
+
+    def get_course_count(self, obj):
+        # Count of distinct courses with papers from this school
+        return obj.papers.filter(status="published").values("course").distinct().count()
+
+    def get_average_rating(self, obj):
+        # Average rating of all papers from this school
+        from django.db.models import Avg
+
+        avg_rating = obj.papers.filter(status="published").aggregate(
+            avg_rating=Avg("reviews__rating")
+        )["avg_rating"]
+        return round(avg_rating, 1) if avg_rating is not None else None
+
+    def get_total_downloads(self, obj):
+        # Sum of all downloads from papers in this school
+        from django.db.models import Sum
+
+        total = obj.papers.filter(status="published").aggregate(
+            total_downloads=Sum("downloads")
+        )["total_downloads"]
+        return total if total is not None else 0
 
 
 class PaperReviewSerializer(serializers.ModelSerializer):
@@ -238,9 +283,12 @@ class PaperSerializer(serializers.ModelSerializer):
             "name": f"{user.first_name} {user.last_name}".strip() or user.username,
             "email": user.email if user == request.user else None,
             "avatar": avatar_url,
+            "papers_count": user.papers.filter(
+                status="published"
+            ).count(),  # Total published papers
             "papers_sold": user.papers.filter(status="published")
             .exclude(is_free=True)
-            .count(),
+            .count(),  # Only paid papers
         }
 
     def get_can_edit(self, obj):

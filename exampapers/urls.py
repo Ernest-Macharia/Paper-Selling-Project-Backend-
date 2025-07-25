@@ -14,11 +14,13 @@ from .views import (
     PaperDetailView,
     PaperDownloadView,
     PaperReviewCreateAPIView,
+    PapersByAuthorView,
     PaperUpdateView,
     PaperUploadView,
     PopularCategoriesView,
     PopularCoursesView,
     ReceivedReviewsListAPIView,
+    SchoolDetailView,
     SchoolListView,
     UserDownloadsView,
     UserOrderListView,
@@ -42,6 +44,11 @@ urlpatterns = [
     path("papers/", AllPapersView.as_view(), name="all-papers"),
     path("papers/<int:pk>/", PaperDetailView.as_view(), name="paper-detail"),
     path(
+        "papers/author/<int:author_id>/",
+        PapersByAuthorView.as_view(),
+        name="papers-by-author",
+    ),
+    path(
         "papers/<int:pk>/download/", PaperDownloadView.as_view(), name="paper-download"
     ),
     path("papers/most-viewed/", MostViewedPapersView.as_view(), name="most-viewed"),
@@ -51,6 +58,8 @@ urlpatterns = [
     path("papers/<int:pk>/", PaperUpdateView.as_view(), name="paper-update"),
     path("papers/<int:pk>/delete/", PaperDeleteView.as_view(), name="paper-delete"),
     path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path("schools/", SchoolListView.as_view(), name="school-list"),
+    path("schools/<int:pk>/", SchoolDetailView.as_view(), name="school-detail"),
     path(
         "papers/<int:pk>/download/reviews/",
         PaperReviewCreateAPIView.as_view(),

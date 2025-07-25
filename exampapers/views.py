@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models import Avg, Count, F, OuterRef, Q, Subquery, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -155,6 +155,35 @@ class PaperDetailView(APIView):
         return Response(serializer.data)
 
 
+class PapersByAuthorView(generics.ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        author_id = self.kwargs["author_id"]
+        return (
+            Paper.objects.filter(author_id=author_id, status="published")
+            .select_related("category", "course", "school")
+            .order_by("-upload_date")
+        )
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            author = User.objects.filter(id=kwargs["author_id"]).first()
+
+            response_data = {
+                "papers": serializer.data,
+                "author_name": author.get_full_name() if author else "Unknown Author",
+            }
+
+            return Response(response_data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
 class PaperFilter(FilterSet):
     price = ChoiceFilter(
         choices=[("free", "Free"), ("paid", "Paid")],
@@ -253,14 +282,7 @@ class PaperUploadView(generics.CreateAPIView):
 class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = None
-
-    def get_queryset(self):
-        return Category.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published")),
-            average_price=Avg("papers__price", filter=Q(papers__status="published")),
-            average_rating=Avg("papers__reviews__rating"),
-        ).order_by("-paper_count")
+    pagination_class = PageNumberPagination
 
     filter_backends = [
         DjangoFilterBackend,
@@ -271,36 +293,87 @@ class CategoryListView(generics.ListAPIView):
     ordering_fields = ["name", "paper_count", "average_price", "average_rating"]
     ordering = ["-paper_count"]
 
-
-class CourseListView(generics.ListAPIView):
-    serializer_class = CourseSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [
-        DjangoFilterBackend,
-        filters.SearchFilter,
-        filters.OrderingFilter,
-    ]
-    search_fields = ["name", "category__name"]
-    ordering_fields = ["name", "paper_count", "average_price", "average_rating"]
-    ordering = ["-paper_count"]
-
     def get_queryset(self):
-        all_param = self.request.query_params.get("all")
-        queryset = Course.objects.annotate(
+        return Category.objects.annotate(
             paper_count=Count("papers", filter=Q(papers__status="published")),
             average_price=Avg("papers__price", filter=Q(papers__status="published")),
             average_rating=Avg("papers__reviews__rating"),
         )
 
-        if self.request.query_params.get("school_id"):
+    def get_paginated_response(self, data):
+        if self.request.query_params.get("all") == "true":
+            return Response(data)
+        return super().get_paginated_response(data)
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get("all") == "true":
+            return None
+        return super().paginate_queryset(queryset)
+
+
+class CourseListView(generics.ListAPIView):
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = PageNumberPagination
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = [
+        "name",
+    ]
+    ordering_fields = [
+        "name",
+        "paper_count",
+        "average_price",
+        "average_rating, school_name",
+    ]
+    ordering = [
+        "-paper_count",
+    ]
+
+    def get_queryset(self):
+        search = self.request.query_params.get("search")
+        school_name = self.request.query_params.get("school_name")
+        ordering = self.request.query_params.get("ordering")
+        all_param = self.request.query_params.get("all")
+
+        first_school_subquery = (
+            Paper.objects.filter(course=OuterRef("pk"), school__isnull=False)
+            .order_by("school__name")
+            .values("school__name")[:1]
+        )
+
+        queryset = Course.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published")),
+            average_price=Avg("papers__price", filter=Q(papers__status="published")),
+            average_rating=Avg("papers__reviews__rating"),
+            school_name=Subquery(first_school_subquery),
+        )
+
+        if search:
             queryset = queryset.filter(
-                schools__id=self.request.query_params["school_id"]
+                Q(name__icontains=search)
+                | Q(category__icontains=search)
+                | Q(papers__school__name__icontains=search)
             )
+
+        if school_name:
+            queryset = queryset.filter(papers__school__name__icontains=school_name)
+
+        if ordering:
+            if ordering.lstrip("-") == "school_name":
+                reverse = ordering.startswith("-")
+                queryset = queryset.order_by(("-" if reverse else "") + "school_name")
+            else:
+                queryset = queryset.order_by(ordering)
 
         if all_param == "true":
             self.pagination_class = None
 
-        return queryset
+        return queryset.distinct()
 
 
 class PopularCoursesView(generics.ListAPIView):
@@ -328,17 +401,60 @@ class PopularCategoriesView(generics.ListAPIView):
 class SchoolListView(generics.ListAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = None
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        queryset = School.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published")),
+            course_count=Count("papers__course", distinct=True),
+            average_rating=Avg("papers__reviews__rating"),
+            total_downloads=Sum("papers__downloads"),
+        ).order_by(
+            "-paper_count"
+        )  # Default ordering
+
+        # Search functionality
+        search_query = self.request.query_params.get("search", "")
+        if search_query:
+            queryset = queryset.filter(Q(name__icontains=search_query))
+
+        # Ordering
+        ordering = self.request.query_params.get("ordering", "")
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
+
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+        DjangoFilterBackend,
+    ]
+    search_fields = [
+        "name",
+    ]
+    ordering_fields = [
+        "name",
+        "paper_count",
+        "course_count",
+        "average_rating",
+        "total_downloads",
+    ]
+
+
+class SchoolDetailView(generics.RetrieveAPIView):
+    serializer_class = SchoolSerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = School.objects.all()
+    lookup_field = "pk"
 
     def get_queryset(self):
         return School.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published"))
-        )
-
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "country"]
-    ordering_fields = ["name", "paper_count"]
-    ordering = ["name"]
+            paper_count=Count("papers", filter=Q(papers__status="published")),
+            course_count=Count("papers__course", distinct=True),
+            average_rating=Avg("papers__reviews__rating"),
+            total_downloads=Sum("papers__downloads"),
+        ).prefetch_related("papers", "papers__course", "papers__category")
 
 
 class UserOrderListView(generics.ListAPIView):
