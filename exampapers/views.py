@@ -157,7 +157,7 @@ class PaperDetailView(APIView):
 
 class PapersByAuthorView(generics.ListAPIView):
     serializer_class = PaperSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     pagination_class = None
 
     def get_queryset(self):
