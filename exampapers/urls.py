@@ -24,6 +24,7 @@ from .views import (
     SchoolListView,
     UserDownloadsView,
     UserOrderListView,
+    UserUploadSchoolListView,
     UserUploadsView,
 )
 
@@ -37,7 +38,9 @@ urlpatterns = [
         PopularCategoriesView.as_view(),
         name="popular-categories",
     ),
-    path("schools/", SchoolListView.as_view(), name="school-list"),
+    path(
+        "user-upload-schools/", UserUploadSchoolListView.as_view(), name="school-list"
+    ),
     path("orders/", UserOrderListView.as_view(), name="user-orders"),
     path("create-order/", CreateOrderView.as_view(), name="order-create"),
     path("orders/<int:pk>/", OrderDetailView.as_view(), name="order-detail"),

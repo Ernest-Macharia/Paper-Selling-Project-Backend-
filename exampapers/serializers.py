@@ -40,6 +40,15 @@ class CourseSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserUploadSchoolSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = School
+        fields = [
+            "id",
+            "name",
+        ]
+
+
 class SchoolSerializer(serializers.ModelSerializer):
     paper_count = serializers.SerializerMethodField()
     course_count = serializers.SerializerMethodField()

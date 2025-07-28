@@ -40,6 +40,7 @@ from .serializers import (
     PaperReviewSerializer,
     PaperSerializer,
     SchoolSerializer,
+    UserUploadSchoolSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -396,6 +397,24 @@ class PopularCategoriesView(generics.ListAPIView):
         return Category.objects.annotate(
             paper_count=Count("papers", filter=Q(papers__status="published"))
         ).order_by("-paper_count")[:10]
+
+
+class UserUploadSchoolListView(generics.ListAPIView):
+    serializer_class = UserUploadSchoolSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return School.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published"))
+        )
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["name", "country"]
+    ordering_fields = ["name", "paper_count"]
+    ordering = ["name"]
+
+    def paginate_queryset(self, queryset):
+        return None
 
 
 class SchoolListView(generics.ListAPIView):
