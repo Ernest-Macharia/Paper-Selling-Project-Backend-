@@ -93,10 +93,8 @@ class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return (
-            Paper.objects.filter(file__isnull=False)
-            .select_related("category", "course", "school")
-            .order_by("-upload_date")
+        return Paper.objects.filter(status="published").select_related(
+            "category", "course", "school"
         )
 
 
