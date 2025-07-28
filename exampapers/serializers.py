@@ -289,7 +289,7 @@ class PaperSerializer(serializers.ModelSerializer):
 
         return {
             "id": user.id,
-            "name": f"{user.first_name} {user.last_name}".strip() or user.username,
+            "name": user.username,
             "email": user.email if user == request.user else None,
             "avatar": avatar_url,
             "papers_count": user.papers.filter(

@@ -399,6 +399,17 @@ class PopularCategoriesView(generics.ListAPIView):
         ).order_by("-paper_count")[:10]
 
 
+class PopularSchoolsView(generics.ListAPIView):
+    serializer_class = SchoolSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        # Popular by number of published papers only
+        return School.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published"))
+        ).order_by("-paper_count")[:10]
+
+
 class UserUploadSchoolListView(generics.ListAPIView):
     serializer_class = UserUploadSchoolSerializer
     permission_classes = [permissions.AllowAny]

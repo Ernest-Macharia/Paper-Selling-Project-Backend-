@@ -19,6 +19,7 @@ from .views import (
     PaperUploadView,
     PopularCategoriesView,
     PopularCoursesView,
+    PopularSchoolsView,
     ReceivedReviewsListAPIView,
     SchoolDetailView,
     SchoolListView,
@@ -38,6 +39,7 @@ urlpatterns = [
         PopularCategoriesView.as_view(),
         name="popular-categories",
     ),
+    path("popular-schools/", PopularSchoolsView.as_view(), name="popular-schools"),
     path(
         "user-upload-schools/", UserUploadSchoolListView.as_view(), name="school-list"
     ),
