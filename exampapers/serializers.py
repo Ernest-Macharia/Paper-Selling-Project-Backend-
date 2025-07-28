@@ -1,6 +1,6 @@
 import logging
 
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from rest_framework import serializers
 
 from exampapers.utils.paper_helpers import generate_preview, set_page_count
@@ -381,6 +381,39 @@ class PaperSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+
+class SchoolDetailSerializer(serializers.ModelSerializer):
+    papers = PaperSerializer(many=True, read_only=True)
+    courses = serializers.SerializerMethodField()
+    paper_count = serializers.IntegerField(read_only=True)
+    course_count = serializers.IntegerField(read_only=True)
+    average_rating = serializers.FloatField(read_only=True)
+    total_downloads = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = School
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "country",
+            "website",
+            "paper_count",
+            "course_count",
+            "average_rating",
+            "total_downloads",
+            "papers",
+            "courses",
+        ]
+
+    def get_courses(self, obj):
+        courses = (
+            Course.objects.filter(papers__school=obj, papers__status="published")
+            .annotate(paper_count=Count("papers"))
+            .distinct()
+        )
+        return CourseSerializer(courses, many=True).data
 
 
 class OrderSerializer(serializers.ModelSerializer):

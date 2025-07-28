@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Avg, Count, F, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Count, F, OuterRef, Prefetch, Q, Subquery, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -39,6 +39,7 @@ from .serializers import (
     OrderSerializer,
     PaperReviewSerializer,
     PaperSerializer,
+    SchoolDetailSerializer,
     SchoolSerializer,
     UserUploadSchoolSerializer,
 )
@@ -455,11 +456,8 @@ class SchoolListView(generics.ListAPIView):
             course_count=Count("papers__course", distinct=True),
             average_rating=Avg("papers__reviews__rating"),
             total_downloads=Sum("papers__downloads"),
-        ).order_by(
-            "-paper_count"
-        )  # Default ordering
+        ).order_by("-paper_count")
 
-        # Search functionality
         search_query = self.request.query_params.get("search", "")
         if search_query:
             queryset = queryset.filter(Q(name__icontains=search_query))
@@ -489,9 +487,8 @@ class SchoolListView(generics.ListAPIView):
 
 
 class SchoolDetailView(generics.RetrieveAPIView):
-    serializer_class = SchoolSerializer
+    serializer_class = SchoolDetailSerializer
     permission_classes = [permissions.AllowAny]
-    queryset = School.objects.all()
     lookup_field = "pk"
 
     def get_queryset(self):
@@ -500,7 +497,58 @@ class SchoolDetailView(generics.RetrieveAPIView):
             course_count=Count("papers__course", distinct=True),
             average_rating=Avg("papers__reviews__rating"),
             total_downloads=Sum("papers__downloads"),
-        ).prefetch_related("papers", "papers__course", "papers__category")
+        ).prefetch_related(
+            Prefetch(
+                "papers",
+                queryset=Paper.objects.filter(status="published")
+                .select_related("course", "category")
+                .annotate(
+                    download_count=Count("downloads"), review_count=Count("reviews")
+                ),
+            ),
+            Prefetch("papers__course", queryset=Course.objects.all()),
+        )
+
+
+class SchoolPapersView(generics.ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        school_id = self.kwargs["pk"]
+        return (
+            Paper.objects.filter(school_id=school_id, status="published")
+            .select_related("course", "category", "school")
+            .annotate(download_count=Count("downloads"), review_count=Count("reviews"))
+            .order_by("-upload_date")
+        )
+
+
+class SchoolCoursesPagination(PageNumberPagination):
+    page_size = 8
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class SchoolCoursesView(generics.ListAPIView):
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = SchoolCoursesPagination
+
+    def get_queryset(self):
+        school_id = self.kwargs["pk"]
+        queryset = (
+            Course.objects.filter(
+                papers__school_id=school_id, papers__status="published"
+            )
+            .annotate(paper_count=Count("papers", filter=Q(papers__status="published")))
+            .distinct()
+            .order_by("name")
+        )
+
+        print(f"Total courses found: {queryset.count()}")
+        return queryset
 
 
 class UserOrderListView(generics.ListAPIView):

@@ -22,8 +22,10 @@ from .views import (
     PopularCoursesView,
     PopularSchoolsView,
     ReceivedReviewsListAPIView,
+    SchoolCoursesView,
     SchoolDetailView,
     SchoolListView,
+    SchoolPapersView,
     UserDownloadsView,
     UserOrderListView,
     UserUploadSchoolListView,
@@ -67,6 +69,10 @@ urlpatterns = [
     path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
     path("schools/", SchoolListView.as_view(), name="school-list"),
     path("schools/<int:pk>/", SchoolDetailView.as_view(), name="school-detail"),
+    path("schools/<int:pk>/papers/", SchoolPapersView.as_view(), name="school-papers"),
+    path(
+        "schools/<int:pk>/courses/", SchoolCoursesView.as_view(), name="school-courses"
+    ),
     path(
         "papers/<int:pk>/download/reviews/",
         PaperReviewCreateAPIView.as_view(),

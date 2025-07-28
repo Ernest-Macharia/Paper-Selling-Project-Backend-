@@ -44,9 +44,6 @@ class School(models.Model):
 class Course(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True)
-    category = models.CharField(max_length=100, blank=True, null=True)
-    schools = models.ManyToManyField(School, related_name="courses")
-    description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
