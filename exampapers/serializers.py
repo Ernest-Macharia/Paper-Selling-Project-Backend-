@@ -24,6 +24,8 @@ class CourseSerializer(serializers.ModelSerializer):
     paper_count = serializers.IntegerField(read_only=True)
     average_price = serializers.FloatField(read_only=True)
     average_rating = serializers.FloatField(read_only=True)
+    category = serializers.CharField(read_only=True)
+    school_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Course
@@ -31,6 +33,7 @@ class CourseSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "paper_count",
+            "category",
             "average_price",
             "average_rating",
             "school_name",
