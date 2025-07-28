@@ -7,6 +7,7 @@ from .views import (
     CreateOrderView,
     DashboardStatsView,
     GivenReviewsListAPIView,
+    LatestPapersView,
     LatestUserPapersView,
     MostViewedPapersView,
     OrderDetailView,
@@ -57,7 +58,7 @@ urlpatterns = [
         "papers/<int:pk>/download/", PaperDownloadView.as_view(), name="paper-download"
     ),
     path("papers/most-viewed/", MostViewedPapersView.as_view(), name="most-viewed"),
-    path("papers/latest-papers/", LatestUserPapersView.as_view(), name="latest-papers"),
+    path("papers/latest-papers/", LatestPapersView.as_view(), name="latest-papers"),
     path("dashboard/latest-papers/", LatestUserPapersView.as_view()),
     path("my-uploads/", UserUploadsView.as_view(), name="user-uploads"),
     path("my-downloads/", UserDownloadsView.as_view(), name="user-downloads"),
