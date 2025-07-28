@@ -91,10 +91,13 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
 class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
-        return Paper.objects.filter(status="published").select_related(
-            "category", "course", "school"
+        return (
+            Paper.objects.filter(status="published")
+            .select_related("category", "course", "school")
+            .order_by("-upload_date")
         )
 
 
