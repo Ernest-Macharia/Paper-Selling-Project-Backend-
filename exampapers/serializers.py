@@ -308,6 +308,12 @@ class PaperSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return request and request.user == obj.author
 
+    def validate_file(self, file):
+        max_size = 50 * 1024 * 1024  # 50MB
+        if file.size > max_size:
+            raise serializers.ValidationError("File size exceeds 50MB limit.")
+        return file
+
     def create(self, validated_data):
         validated_data["author"] = self.context["request"].user
         paper = super().create(validated_data)

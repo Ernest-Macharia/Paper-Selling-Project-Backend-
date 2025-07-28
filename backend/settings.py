@@ -102,6 +102,8 @@ AUTH_USER_MODEL = "users.User"
 TIME_ZONE = "Africa/Nairobi"
 USE_TZ = True
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
+
 
 # Application definition
 

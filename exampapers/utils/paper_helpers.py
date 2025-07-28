@@ -126,30 +126,22 @@ def _generate_preview_image(self, pdf_buffer: BytesIO) -> None:
 
 
 def create_watermark(text: str = DEFAULT_WATERMARK_TEXT) -> PdfReader:
-    """Create a PDF watermark with the specified text.
-
-    Args:
-        text: The text to use for the watermark.
-
-    Returns:
-        PdfReader: A PDF reader containing the watermark.
-    """
+    """Create a PDF watermark with the specified text at the bottom center of the page."""
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
 
     # Watermark styling
     can.setFillAlpha(0.2)  # 20% opacity
-    can.setFont("Helvetica", 60)
-    can.setFillColorRGB(0.2, 0.2, 0.2)  # Dark gray
+    can.setFont("Helvetica", 14)
+    can.setFillColorRGB(0.3, 0.3, 0.3)  # Dark gray
 
-    # Get page dimensions
+    # Get page dimensions (unpack tuple)
     width, height = letter
 
-    # Draw watermark diagonally across the page
+    # Draw watermark at the bottom center
+    margin = 30
     can.saveState()
-    can.translate(width / 2, height / 2)
-    can.rotate(45)
-    can.drawCentredString(0, 0, text)
+    can.drawCentredString(width / 2, margin, text)
     can.restoreState()
 
     can.save()

@@ -177,7 +177,7 @@ class PapersByAuthorView(generics.ListAPIView):
 
             response_data = {
                 "papers": serializer.data,
-                "author_name": author.get_full_name() if author else "Unknown Author",
+                "author_name": author.username if author else None,
             }
 
             return Response(response_data)
