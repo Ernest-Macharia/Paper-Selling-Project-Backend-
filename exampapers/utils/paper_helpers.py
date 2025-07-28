@@ -131,14 +131,10 @@ def create_watermark(text: str = DEFAULT_WATERMARK_TEXT) -> PdfReader:
     can = canvas.Canvas(packet, pagesize=letter)
 
     # Watermark styling
-    can.setFillAlpha(0.2)  # 20% opacity
-    can.setFont("Helvetica", 14)
-    can.setFillColorRGB(0.3, 0.3, 0.3)  # Dark gray
-
-    # Get page dimensions (unpack tuple)
+    can.setFillAlpha(0.2)
+    can.setFont("Helvetica", 60)
+    can.setFillColorRGB(0.3, 0.3, 0.3)
     width, height = letter
-
-    # Draw watermark at the bottom center
     margin = 30
     can.saveState()
     can.drawCentredString(width / 2, margin, text)
