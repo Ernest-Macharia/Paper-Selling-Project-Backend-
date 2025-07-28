@@ -88,6 +88,18 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
         return Paper.objects.all().select_related("category", "course", "school")
 
 
+class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return (
+            Paper.objects.filter(status="published")
+            .select_related("category", "course", "school")
+            .order_by("-upload_date")
+        )
+
+
 class UserUploadsView(generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.IsAuthenticated]
