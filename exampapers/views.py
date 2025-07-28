@@ -82,12 +82,10 @@ class PaperFilterMixin:
 class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
-        # Only published papers, can add filtering and searching from mixin
-        return Paper.objects.filter(status="published").select_related(
-            "category", "course", "school"
-        )
+        return Paper.objects.all().select_related("category", "course", "school")
 
 
 class UserUploadsView(generics.ListAPIView):
@@ -375,6 +373,11 @@ class CourseListView(generics.ListAPIView):
             self.pagination_class = None
 
         return queryset.distinct()
+
+    def get_paginated_response(self, data):
+        if self.request.query_params.get("page"):
+            return super().get_paginated_response(data)
+        return Response({"results": data, "count": len(data)})
 
 
 class PopularCoursesView(generics.ListAPIView):
