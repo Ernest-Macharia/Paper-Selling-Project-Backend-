@@ -16,7 +16,7 @@ from rest_framework import filters, generics, permissions
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -90,8 +90,10 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
 
 class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperSerializer
-    permission_classes = [permissions.AllowAny]
     pagination_class = None
+
+    def get_permissions(self):
+        return [AllowAny()]  # ✅ forces public access
 
     def get_queryset(self):
         return (
