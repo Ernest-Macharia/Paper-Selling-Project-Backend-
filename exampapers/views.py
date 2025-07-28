@@ -94,7 +94,7 @@ class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
 
     def get_queryset(self):
         return (
-            Paper.objects.filter(status="published")
+            Paper.objects.filter(file__isnull=False)
             .select_related("category", "course", "school")
             .order_by("-upload_date")
         )
