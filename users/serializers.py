@@ -12,8 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "id",
-            "first_name",
-            "last_name",
+            "username",
             "email",
             "full_name",
             "is_seller",
@@ -36,8 +35,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "first_name",
-            "last_name",
+            "username",
             "email",
             "gender",
             "birth_year",
@@ -51,15 +49,26 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "email": {"required": True},
         }
 
+    def validate_username(self, value):
+        if self.instance and self.instance.username != value:
+            if User.objects.filter(username=value).exists():
+                raise serializers.ValidationError("This username is already taken.")
+        return value
+
     def update(self, instance, validated_data):
+        username_changed = (
+            "username" in validated_data
+            and instance.username != validated_data["username"]
+        )
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        # Regenerate username
-        full_name = f"{instance.first_name} {instance.last_name}".strip()
-        instance.username = full_name.lower().replace(" ", "_")
-
         instance.save()
+
+        if username_changed:
+            pass
+
         return instance
 
 
@@ -69,13 +78,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "first_name",
-            "last_name",
+            "username",
             "email",
             "password",
             "is_seller",
             "is_buyer",
         )
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already in use.")
+        if not value:
+            raise serializers.ValidationError("Username is required.")
+        if len(value) < 6:
+            raise serializers.ValidationError(
+                "Username must be at least 6 characters long."
+            )
+        return value
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -92,9 +111,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(
             email=validated_data["email"],
+            username=validated_data["username"],
             password=validated_data["password"],
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
             is_seller=validated_data.get("is_seller", False),
             is_buyer=validated_data.get("is_buyer", False),
         )
@@ -148,7 +166,7 @@ class CustomTokenObtainSerializer(serializers.Serializer):
             "user": {
                 "id": user.id,
                 "email": user.email,
-                "first_name": user.first_name,
+                "username": user.username,
                 "is_seller": getattr(user, "is_seller", False),
                 "is_buyer": getattr(user, "is_buyer", False),
             },

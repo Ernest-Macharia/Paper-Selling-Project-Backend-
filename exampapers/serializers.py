@@ -91,7 +91,7 @@ class SchoolSerializer(serializers.ModelSerializer):
 
 class PaperReviewSerializer(serializers.ModelSerializer):
     paper_title = serializers.CharField(source="paper.title", read_only=True)
-    user_name = serializers.CharField(source="user.first_name", read_only=True)
+    user_name = serializers.CharField(source="user.username", read_only=True)
 
     class Meta:
         model = Review
