@@ -367,11 +367,7 @@ class CourseListView(generics.ListAPIView):
         )
 
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search)
-                | Q(category__icontains=search)
-                | Q(papers__school__name__icontains=search)
-            )
+            queryset = queryset.filter(Q(name__icontains=search))
 
         if school_name:
             queryset = queryset.filter(papers__school__name__icontains=school_name)
