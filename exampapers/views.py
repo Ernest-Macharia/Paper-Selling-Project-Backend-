@@ -394,6 +394,71 @@ class CourseListView(generics.ListAPIView):
         return Response({"results": data, "count": len(data)})
 
 
+class UploaadCourseListView(generics.ListAPIView):
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = PageNumberPagination
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    search_fields = [
+        "name",
+    ]
+    ordering_fields = [
+        "name",
+        "paper_count",
+        "average_price",
+        "average_rating, school_name",
+    ]
+    ordering = [
+        "-paper_count",
+    ]
+
+    def get_queryset(self):
+        search = self.request.query_params.get("search")
+        school_name = self.request.query_params.get("school_name")
+        ordering = self.request.query_params.get("ordering")
+        all_param = self.request.query_params.get("all")
+
+        first_school_subquery = (
+            Paper.objects.filter(course=OuterRef("pk"), school__isnull=False)
+            .order_by("school__name")
+            .values("school__name")[:1]
+        )
+
+        queryset = Course.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published")),
+            average_price=Avg("papers__price", filter=Q(papers__status="published")),
+            average_rating=Avg("papers__reviews__rating"),
+            school_name=Subquery(first_school_subquery),
+        )
+
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search)
+                | Q(category__icontains=search)
+                | Q(papers__school__name__icontains=search)
+            )
+
+        if school_name:
+            queryset = queryset.filter(papers__school__name__icontains=school_name)
+
+        if ordering:
+            if ordering.lstrip("-") == "school_name":
+                reverse = ordering.startswith("-")
+                queryset = queryset.order_by(("-" if reverse else "") + "school_name")
+            else:
+                queryset = queryset.order_by(ordering)
+
+        if all_param == "true":
+            self.pagination_class = None
+
+        return queryset.distinct()
+
+
 class PopularCoursesView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]

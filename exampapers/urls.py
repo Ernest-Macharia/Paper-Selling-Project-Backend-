@@ -26,6 +26,7 @@ from .views import (
     SchoolDetailView,
     SchoolListView,
     SchoolPapersView,
+    UploaadCourseListView,
     UserDownloadsView,
     UserOrderListView,
     UserUploadSchoolListView,
@@ -37,6 +38,7 @@ urlpatterns = [
     path("categories/", CategoryListView.as_view(), name="category-list"),
     path("courses/", CourseListView.as_view(), name="course-list"),
     path("popular-courses/", PopularCoursesView.as_view(), name="popular-courses"),
+    path("upload-courses/", UploaadCourseListView.as_view(), name="upload-courses"),
     path(
         "popular-categories/",
         PopularCategoriesView.as_view(),
