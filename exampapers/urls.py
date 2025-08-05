@@ -66,7 +66,7 @@ urlpatterns = [
     path("dashboard/latest-papers/", LatestUserPapersView.as_view()),
     path("my-uploads/", UserUploadsView.as_view(), name="user-uploads"),
     path("my-downloads/", UserDownloadsView.as_view(), name="user-downloads"),
-    path("papers/<int:pk>/", PaperUpdateView.as_view(), name="paper-update"),
+    path("papers/update/<int:pk>/", PaperUpdateView.as_view(), name="paper-update"),
     path("papers/<int:pk>/delete/", PaperDeleteView.as_view(), name="paper-delete"),
     path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
     path("schools/", SchoolListView.as_view(), name="school-list"),
