@@ -60,25 +60,19 @@ def pesapal_callback_view(request, order_id):
         if verify_pesapal_payment(order_tracking_id, order):
             pesapal_payment.status = "COMPLETED"
             pesapal_payment.save()
-            return redirect(
-                f"{settings.FRONTEND_URL}/payment/success?order_id={order_id}"
-            )
+            return redirect(f"{settings.BASE_URL}/payment/success?order_id={order_id}")
         else:
             pesapal_payment.status = "FAILED"
             pesapal_payment.save()
-            return redirect(
-                f"{settings.FRONTEND_URL}/payment/failed?order_id={order_id}"
-            )
+            return redirect(f"{settings.BASE_URL}/payment/failed?order_id={order_id}")
 
     except (Order.DoesNotExist, PesapalPayment.DoesNotExist) as e:
         logger.error(f"Order/Payment not found: {str(e)}")
-        return redirect(
-            f"{settings.FRONTEND_URL}/payment/error?message=Order not found"
-        )
+        return redirect(f"{settings.BASE_URL}/payment/error?message=Order not found")
     except Exception as e:
         logger.error(f"Callback processing error: {str(e)}")
         return redirect(
-            f"{settings.FRONTEND_URL}/payment/error?message=Payment processing error"
+            f"{settings.BASE_URL}/payment/error?message=Payment processing error"
         )
 
 
