@@ -30,7 +30,10 @@ def handle_paypal_checkout(order):
         "intent": "CAPTURE",
         "purchase_units": [
             {
-                "amount": {"currency_code": "USD", "value": f"{order.price:.2f}"},
+                "amount": {
+                    "currency_code": "USD" or "USD",
+                    "value": f"{order.price:.2f}",
+                },
                 "description": f"Purchase of {first_paper.title}",
             }
         ],

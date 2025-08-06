@@ -26,16 +26,17 @@ def stripe_webhook(request):
 def paypal_webhook(request):
     try:
         payload = json.loads(request.body)
-    except json.JSONDecodeError:
-        return HttpResponse("Invalid JSON", status=400)
+        if not verify_paypal_signature(request.headers, payload):
+            logger.warning("Invalid PayPal webhook signature")
+            return HttpResponse("Invalid signature", status=400)
 
-    if not verify_paypal_signature(payload):
-        return HttpResponse("Invalid signature", status=400)
-
-    try:
         return handle_paypal_event(request)
-    except Exception as e:
-        logger.exception("[PayPal Webhook] Unexpected error: %s", e)
+
+    except json.JSONDecodeError as e:
+        logger.error("Invalid JSON payload: %s", e)
+        return HttpResponse("Invalid JSON", status=400)
+    except Exception:
+        logger.exception("Unexpected error in PayPal webhook")
         return HttpResponse(status=500)
 
 

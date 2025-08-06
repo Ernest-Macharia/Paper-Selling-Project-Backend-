@@ -58,6 +58,10 @@ def handle_paypal_event(request):
             logger.warning(
                 f"[PayPal Webhook] Payment was refunded or denied: {payment.external_id}"
             )
+        elif event_type in ["PAYMENT.CAPTURE.PENDING", "CHECKOUT.ORDER.PROCESSING"]:
+            update_payment_status(payment.external_id, "pending")
+        elif event_type in ["PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.FAILED"]:
+            update_payment_status(payment.external_id, "failed")
 
     else:
         logger.warning(
