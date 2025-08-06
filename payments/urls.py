@@ -3,7 +3,12 @@ from rest_framework.routers import DefaultRouter
 
 from payments.payment_views.checkout import CheckoutInitiateView, unified_checkout
 from payments.payment_views.refunds import refund_payment
-from payments.services.webhooks import mpesa_webhook, paypal_webhook, stripe_webhook
+from payments.services.webhooks import (
+    mpesa_webhook,
+    paypal_webhook,
+    pesapal_callback_view,
+    stripe_webhook,
+)
 from payments.views import (
     PayoutInfoView,
     WalletSummaryView,
@@ -13,6 +18,7 @@ from payments.views import (
     verify_payment,
 )
 from payments.webhooks.paystack_webhooks import handle_paystack_webhook
+from payments.webhooks.pesapal_webhooks import handle_pesapal_event
 
 router = DefaultRouter()
 router.register(r"withdrawals", WithdrawalRequestViewSet, basename="withdrawal")
@@ -35,6 +41,16 @@ urlpatterns = [
     path("webhooks/paypal/", paypal_webhook, name="paypal_webhook"),
     path("webhooks/mpesa/", mpesa_webhook, name="mpesa_webhook"),
     path("webhooks/paystack/", handle_paystack_webhook),
+    path(
+        "webhooks/pesapal/<uuid:order_id>/",
+        handle_pesapal_event,
+        name="pesapal-webhook",
+    ),
+    path(
+        "pesapal/callback/<uuid:order_id>/",
+        pesapal_callback_view,
+        name="pesapal-callback",
+    ),
     path("wallet/summary/", WalletSummaryView.as_view(), name="wallet-summary"),
     path("", include(router.urls)),
 ]

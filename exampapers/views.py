@@ -114,6 +114,9 @@ class UserUploadsView(generics.ListAPIView):
     search_fields = ["title", "description"]
     ordering_fields = ["upload_date", "title", "views", "downloads"]
     ordering = ["-upload_date"]
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
     def get_queryset(self):
         return Paper.objects.filter(author=self.request.user).select_related(

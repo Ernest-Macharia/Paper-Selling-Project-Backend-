@@ -6,6 +6,7 @@ from django.conf import settings
 
 from paypal_api.checkout import get_paypal_access_token
 from paypal_api.models import PayPalPayment
+from pesapal.checkout import get_pesapal_auth_token
 
 logger = logging.getLogger(__name__)
 
@@ -91,5 +92,39 @@ def verify_paystack_payment(reference, order):
 
     except Exception as e:
         logger.exception("Error during Paystack payment verification: %s", e)
+
+    return False
+
+
+def verify_pesapal_payment(order_tracking_id, order):
+    auth_token = get_pesapal_auth_token()
+
+    headers = {
+        "Authorization": f"Bearer {auth_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    try:
+        # Check payment status
+        status_url = (
+            f"{settings.PESAPAL_API_BASE}/api/Transactions/GetTransactionStatus"
+        )
+        params = {"orderTrackingId": order_tracking_id}
+
+        response = requests.get(
+            status_url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT
+        )
+        response.raise_for_status()
+
+        status_data = response.json()
+
+        if status_data.get("payment_status") == "COMPLETED":
+            order.status = "completed"
+            order.save(update_fields=["status"])
+            return True
+
+    except Exception as e:
+        logger.exception(f"Error verifying Pesapal payment: {e}")
 
     return False
