@@ -90,8 +90,7 @@ def submit_pesapal_order(order, auth_token, ipn_id):
             "notification_id": ipn_id,
             "billing_address": {
                 "email_address": order.user.email,
-                "first_name": order.user.first_name or "Customer",
-                "last_name": order.user.last_name or "User",
+                "username": order.user.username or "Customer",
             },
         }
 

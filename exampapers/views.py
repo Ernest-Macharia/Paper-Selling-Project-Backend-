@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.utils.timezone import now
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import ChoiceFilter, DjangoFilterBackend, FilterSet
 from rest_framework import filters, generics, permissions
@@ -89,6 +90,7 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
         return Paper.objects.all().select_related("category", "course", "school")
 
 
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.AllowAny]
@@ -458,37 +460,49 @@ class UploaadCourseListView(generics.ListAPIView):
         return queryset.distinct()
 
 
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class PopularCoursesView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Popular by number of published papers only
-        return Course.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published"))
-        ).order_by("-paper_count")[:10]
+        return (
+            Course.objects.annotate(
+                paper_count=Count("papers", filter=Q(papers__status="published"))
+            )
+            .filter(paper_count__gt=0)
+            .order_by("-paper_count")[:10]
+        )
 
 
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class PopularCategoriesView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Popular by number of published papers only
-        return Category.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published"))
-        ).order_by("-paper_count")[:10]
+        return (
+            Category.objects.annotate(
+                paper_count=Count("papers", filter=Q(papers__status="published"))
+            )
+            .filter(paper_count__gt=0)
+            .order_by("-paper_count")[:10]
+        )
 
 
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class PopularSchoolsView(generics.ListAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Popular by number of published papers only
-        return School.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published"))
-        ).order_by("-paper_count")[:10]
+        return (
+            School.objects.annotate(
+                paper_count=Count("papers", filter=Q(papers__status="published"))
+            )
+            .filter(paper_count__gt=0)
+            .order_by("-paper_count")[:10]
+        )
 
 
 class UserUploadSchoolListView(generics.ListAPIView):
