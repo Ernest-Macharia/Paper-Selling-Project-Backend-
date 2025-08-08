@@ -126,20 +126,13 @@ def _generate_preview_image(self, pdf_buffer: BytesIO) -> None:
 
 
 def create_watermark(text: str = DEFAULT_WATERMARK_TEXT) -> PdfReader:
-    """Create a PDF watermark with the specified text at the bottom center of the page."""
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
-
-    # Watermark styling
     can.setFillAlpha(0.2)
     can.setFont("Helvetica", 60)
     can.setFillColorRGB(0.3, 0.3, 0.3)
     width, height = letter
-    margin = 30
-    can.saveState()
-    can.drawCentredString(width / 2, margin, text)
-    can.restoreState()
-
+    can.drawCentredString(width / 2, 30, text)
     can.save()
     packet.seek(0)
     return PdfReader(packet)
@@ -148,29 +141,13 @@ def create_watermark(text: str = DEFAULT_WATERMARK_TEXT) -> PdfReader:
 def add_watermark_to_pdf(
     input_file: Union[BinaryIO, BytesIO], output_stream: Optional[BytesIO] = None
 ) -> BytesIO:
-    """Add watermark to a PDF file.
-
-    Args:
-        input_file: The input PDF file or stream.
-        output_stream: Optional output stream to write to.
-
-    Returns:
-        BytesIO: A stream containing the watermarked PDF.
-    """
     output_stream = output_stream or BytesIO()
     watermark = create_watermark()
     reader = PdfReader(input_file)
     writer = PdfWriter()
 
-    total_pages = len(reader.pages)
-    # Ensure we don't duplicate pages for very short PDFs
-    watermark_pages = {
-        min(i, total_pages - 1) for i in (0, total_pages // 2, total_pages - 1)
-    }
-
-    for page_num in range(total_pages):
-        page = reader.pages[page_num]
-        if page_num in watermark_pages:
+    for i, page in enumerate(reader.pages):
+        if i == 0:  # only watermark first page
             page.merge_page(watermark.pages[0])
         writer.add_page(page)
 

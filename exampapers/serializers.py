@@ -3,8 +3,6 @@ import logging
 from django.db.models import Avg, Count
 from rest_framework import serializers
 
-from exampapers.utils.paper_helpers import generate_preview, set_page_count
-
 from .models import Category, Course, Order, Paper, Review, School
 
 logger = logging.getLogger(__name__)
@@ -319,46 +317,23 @@ class PaperSerializer(serializers.ModelSerializer):
         paper = super().create(validated_data)
 
         if paper.file:
-            try:
-                set_page_count(paper)
-                generate_preview(paper)
-                paper.save(
-                    update_fields=["page_count", "preview_file", "preview_image"]
-                )
-            except Exception as e:
-                logger.error(f"Failed to process paper file: {str(e)}")
+            paper.set_page_count()
+            paper.generate_preview()
+            paper.save(update_fields=["page_count", "preview_file", "preview_image"])
 
         return paper
 
     def update(self, instance, validated_data):
-        # Handle file upload separately if present
         file = validated_data.pop("file", None)
-
-        # Update other fields
         instance = super().update(instance, validated_data)
 
-        # Update file if provided
-        if file is not None:  # Explicit None check to handle file removal
-            if file:  # New file provided
-                # Delete old files
-                if instance.file:
-                    instance.file.delete()
-                if instance.preview_file:
-                    instance.preview_file.delete()
-
-                instance.file = file
-                set_page_count(instance)
-                generate_preview(instance)
-            else:  # File removal requested
-                if instance.file:
-                    instance.file.delete()
-                    instance.file = None
-                if instance.preview_file:
-                    instance.preview_file.delete()
-                    instance.preview_file = None
-                instance.page_count = 0
-
-            instance.save()
+        if file is not None:
+            instance.file = file
+            instance.set_page_count()
+            instance.generate_preview()
+            instance.save(
+                update_fields=["file", "page_count", "preview_file", "preview_image"]
+            )
 
         return instance
 

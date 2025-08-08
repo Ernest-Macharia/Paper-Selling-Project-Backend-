@@ -141,6 +141,14 @@ class Paper(models.Model):
 
     def generate_preview(self) -> None:
         """Generate preview PDF and image for this Paper."""
+
+        if self.preview_file and self.preview_file.storage.exists(
+            self.preview_file.name
+        ):
+            logger.info(f"Preview already exists for paper {self.id}, skipping.")
+            return
+        if not self.file:
+            return
         if not self.file:
             logger.warning(
                 f"No file found for paper {self.id}, skipping preview generation"
@@ -223,27 +231,28 @@ class Paper(models.Model):
             )
             raise
 
-    def _generate_preview_image(self, pdf_buffer: BytesIO) -> None:
-        """Generate a fallback image preview for mobile devices."""
+    def _generate_preview_image(self, pdf_buffer: BytesIO):
+        if self.preview_image and self.preview_image.storage.exists(
+            self.preview_image.name
+        ):
+            logger.info(f"Preview image already exists for paper {self.id}, skipping.")
+            return
         try:
             images = convert_from_bytes(
                 pdf_buffer.getvalue(), dpi=100, first_page=1, last_page=1, fmt="jpeg"
             )
-
             if images:
                 img_buffer = BytesIO()
                 images[0].save(img_buffer, format="JPEG", quality=85)
                 img_buffer.seek(0)
-
                 preview_image_name = f"{os.path.splitext(os.path.basename(self.file.name))[0]}_preview.jpg"
                 self.preview_image.save(
                     preview_image_name, ContentFile(img_buffer.getvalue()), save=False
                 )
         except Exception as e:
-            logger.warning(f"Couldn't generate image preview: {str(e)}")
+            logger.warning(f"Couldn't generate image preview for {self.id}: {e}")
 
     def save(self, *args, **kwargs):
-        # Process watermarking only if a file is uploaded
         if self.file:
             try:
                 original_file = Paper.objects.get(pk=self.pk).file if self.pk else None
@@ -251,22 +260,16 @@ class Paper(models.Model):
                 original_file = None
 
             if not original_file or original_file.name != self.file.name:
-                # Create watermarked version
                 watermarked_buffer = add_watermark_to_pdf(self.file.open("rb"))
-
-                # Generate new filename
                 original_name = os.path.basename(self.file.name)
                 if not original_name.startswith("watermarked_"):
                     original_name = f"watermarked_{original_name}"
-
-                # Save watermarked file to instance (not to DB yet)
                 self.file.save(
                     original_name,
                     ContentFile(watermarked_buffer.getvalue()),
                     save=False,
                 )
 
-        # Final save (single point of saving to DB)
         super().save(*args, **kwargs)
 
 
