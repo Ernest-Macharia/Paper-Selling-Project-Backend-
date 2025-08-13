@@ -489,45 +489,102 @@ class UploaadCourseListView(generics.ListAPIView):
 class PopularCoursesView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         return (
             Course.objects.annotate(
-                paper_count=Count("papers", filter=Q(papers__status="published"))
+                paper_count=Count("papers", filter=Q(papers__status="published")),
+                average_price=Avg(
+                    "papers__price", filter=Q(papers__status="published")
+                ),
+                average_rating=Avg(
+                    "papers__reviews__rating", filter=Q(papers__status="published")
+                ),
+                category_name=F("papers__category__name"),
+                school_name=F("papers__school__name"),
             )
             .filter(paper_count__gt=0)
-            .order_by("-paper_count")[:10]
+            .order_by("-paper_count")[:8]
         )
+
+    def list(self, request, *args, **kwargs):
+        cache_key = "popular_courses_json"
+        data = cache.get(cache_key)
+        if not data:
+            queryset = self.get_queryset()
+            serialized = []
+            for course in queryset:
+                serialized.append(
+                    {
+                        "id": course.id,
+                        "name": course.name,
+                        "paper_count": course.paper_count,
+                        "average_price": course.average_price,
+                        "average_rating": course.average_rating,
+                    }
+                )
+            cache.set(cache_key, serialized, 300)
+            data = serialized
+        return Response(data)
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
 class PopularCategoriesView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         return (
             Category.objects.annotate(
-                paper_count=Count("papers", filter=Q(papers__status="published"))
+                paper_count=Count("papers", filter=Q(papers__status="published")),
+                average_price=Avg(
+                    "papers__price", filter=Q(papers__status="published")
+                ),
+                average_rating=Avg(
+                    "papers__reviews__rating", filter=Q(papers__status="published")
+                ),
             )
             .filter(paper_count__gt=0)
-            .order_by("-paper_count")[:10]
+            .only("id", "name")
+            .order_by("-paper_count")[:8]
         )
+
+    def list(self, request, *args, **kwargs):
+        cache_key = "popular_categories_json"
+        data = cache.get(cache_key)
+        if not data:
+            queryset = self.get_queryset()
+            data = self.get_serializer(queryset, many=True).data
+            cache.set(cache_key, data, 300)
+        return Response(data)
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
 class PopularSchoolsView(generics.ListAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
     def get_queryset(self):
         return (
             School.objects.annotate(
-                paper_count=Count("papers", filter=Q(papers__status="published"))
+                paper_count=Count("papers", filter=Q(papers__status="published")),
             )
             .filter(paper_count__gt=0)
-            .order_by("-paper_count")[:10]
+            .only("id", "name")
+            .order_by("-paper_count")[:8]
         )
+
+    def list(self, request, *args, **kwargs):
+        cache_key = "popular_schools_json"
+        data = cache.get(cache_key)
+        if not data:
+            queryset = self.get_queryset()
+            data = self.get_serializer(queryset, many=True).data
+            cache.set(cache_key, data, 300)
+        return Response(data)
 
 
 class UserUploadSchoolListView(generics.ListAPIView):
