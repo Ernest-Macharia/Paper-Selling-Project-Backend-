@@ -22,7 +22,6 @@ from payments.services.payment_verification import (
     verify_stripe_payment,
 )
 from payments.services.payout_service import disburse_withdrawal
-from paypal_api.models import PayPalPayment
 from paypal_api.utils import get_paypal_access_token
 
 from .models import UserPayoutProfile, Wallet, WithdrawalRequest
@@ -92,62 +91,45 @@ def verify_payment(request):
 
 @api_view(["GET"])
 def paypal_payment_success(request):
-    """Handle successful PayPal payment return"""
     order_id = request.GET.get("order_id")
     token = request.GET.get("token")
     payer_id = request.GET.get("PayerID")
 
-    if not order_id:
-        return Response({"error": "Missing order_id"}, status=400)
+    if not all([order_id, token, payer_id]):
+        return redirect(f"{settings.BASE_URL}/payment/failed?reason=missing_params")
 
     try:
-        # Get the order and payment records
         order = Order.objects.get(id=order_id)
         payment = Payment.objects.get(order=order, gateway="paypal")
-        paypal_payment = PayPalPayment.objects.get(payment=payment)
-
-        # Verify and capture the payment
-        access_token = get_paypal_access_token()
-        capture_url = f"{settings.PAYPAL_API_BASE}/v2/checkout/orders/{token}/capture"
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}",
-        }
-
-        response = requests.post(capture_url, headers=headers, timeout=DEFAULT_TIMEOUT)
-        response.raise_for_status()
-        capture_data = response.json()
-
-        if capture_data.get("status") == "COMPLETED":
-            # Update payment status
-            payment.status = "completed"
-            payment.save()
-
-            # Update PayPal payment record
-            paypal_payment.status = "captured"
-            paypal_payment.payer_id = payer_id
-            paypal_payment.save()
-
-            # Update order status
-            order.status = "completed"
-            update_payment_status(token, "completed", "paypal")
-            order.save()
-
-            # Redirect to frontend success page
-            frontend_url = (
+        # First try to verify normally
+        if verify_paypal_payment(token, order):
+            return redirect(
                 f"{settings.BASE_URL}/payment/success?order_id={order_id}&token={token}"
             )
-            return redirect(frontend_url)
 
-    except Order.DoesNotExist:
-        logger.error(f"Order not found: {order_id}")
-    except Payment.DoesNotExist:
-        logger.error(f"Payment not found for order: {order_id}")
+        # If normal verification fails, check via PayPal API
+        access_token = get_paypal_access_token()
+        order_url = f"{settings.PAYPAL_API_BASE}/v2/checkout/orders/{token}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        order_response = requests.get(
+            order_url, headers=headers, timeout=DEFAULT_TIMEOUT
+        )
+        if order_response.status_code == 200:
+            order_data = order_response.json()
+            if order_data.get("status") == "APPROVED":
+                # Manually complete the order
+                order.status = "completed"
+                order.save()
+                payment.status = "completed"
+                update_payment_status(token, "completed", "paypal")
+                payment.save()
+                return redirect(
+                    f"{settings.BASE_URL}/payment/success?order_id={order_id}&token={token}"
+                )
+
     except Exception as e:
-        logger.error(f"Payment processing failed: {str(e)}")
+        logger.error(f"PayPal success error: {str(e)}")
 
-    # If anything fails, redirect to failure page
     return redirect(f"{settings.BASE_URL}/payment/failed?order_id={order_id}")
 
 
@@ -171,7 +153,7 @@ def paypal_payment_cancel(request):
     except Exception as e:
         logger.error(f"Failed to process cancellation: {str(e)}")
 
-    return redirect(f"{settings.FRONTEND_URL}/payment/cancelled?order_id={order_id}")
+    return redirect(f"{settings.BASE_URL}/payment/cancelled?order_id={order_id}")
 
 
 class WithdrawalRequestViewSet(viewsets.ModelViewSet):

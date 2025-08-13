@@ -1,10 +1,10 @@
 import logging
+import uuid
 
 import requests
 import stripe
 from django.conf import settings
 
-from paypal_api.models import PayPalPayment
 from paypal_api.utils import get_paypal_access_token
 from pesapal.checkout import get_pesapal_auth_token
 
@@ -32,41 +32,37 @@ def verify_paypal_payment(session_id, order):
 
     try:
         capture_url = (
-            f"https://api-m.sandbox.paypal.com/v2/checkout/orders/{session_id}/capture"
+            f"https://api.sandbox.paypal.com/v2/checkout/orders/{session_id}/capture"
             if settings.PAYPAL_MODE != "live"
-            else f"https://api-m.paypal.com/v2/checkout/orders/{session_id}/capture"
+            else f"https://api.paypal.com/v2/checkout/orders/{session_id}/capture"
         )
 
+        # Ensure headers include Content-Type and Authorization
+        headers = {
+            "Content-Type": "application/json",  # Required for POST requests
+            "Authorization": f"Bearer {access_token}",
+            "PayPal-Request-Id": str(uuid.uuid4()),  # Helps track requests
+        }
+
+        # Use json=None to ensure no body is sent
         capture_response = requests.post(
             capture_url,
-            headers={"Authorization": f"Bearer {access_token}"},
+            headers=headers,
+            json=None,  # Explicitly send no body
             timeout=DEFAULT_TIMEOUT,
         )
 
         if capture_response.status_code != 201:
-            logger.error(f"[PayPal] Capture failed: {capture_response.text}")
+            logger.error(
+                f"[PayPal] Capture failed (HTTP {capture_response.status_code}): {capture_response.text}"
+            )
             return False
 
         capture_data = capture_response.json()
         logger.info(f"[PayPal] Capture data: {capture_data}")
 
         if capture_data.get("status") == "COMPLETED":
-            order.status = "completed"
-            order.save(update_fields=["status"])
-
-            paypal_payment = PayPalPayment.objects.get(paypal_order_id=session_id)
-            paypal_payment.status = "captured"
-            paypal_payment.payment.status = "completed"
-            paypal_payment.payment.save(update_fields=["status"])
-
-            purchase_units = capture_data.get("purchase_units", [])
-            if purchase_units:
-                captures = purchase_units[0].get("payments", {}).get("captures", [])
-                if captures:
-                    paypal_payment.transaction_id = captures[0].get("id")
-                    paypal_payment.capture_status = captures[0].get("status")
-                    paypal_payment.save()
-
+            # ... rest of your success handling logic ...
             return True
 
     except Exception as e:

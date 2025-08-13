@@ -1,9 +1,13 @@
+import logging
+
 import requests
 from django.conf import settings
 
 from payments.models import Payment
 from paypal_api.models import PayPalPayment
 from paypal_api.utils import get_paypal_access_token
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60
 
@@ -38,13 +42,14 @@ def handle_paypal_checkout(order):
 
     response = requests.post(
         (
-            "https://api-m.sandbox.paypal.com/v2/checkout/orders"
-            if settings.PAYPAL_MODE != "live"
-            else "https://api-m.paypal.com/v2/checkout/orders"
+            "https://api.paypal.com/v2/checkout/orders"
+            if settings.PAYPAL_MODE == "live"
+            else "https://api.sandbox.paypal.com/v2/checkout/orders"
         ),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {access_token}",
+            "Prefer": "return=representation",
         },
         json=data,
         timeout=DEFAULT_TIMEOUT,
@@ -69,7 +74,11 @@ def handle_paypal_checkout(order):
         customer_email=order.user.email,
     )
 
-    PayPalPayment.objects.create(payment=payment, paypal_order_id=result["id"])
+    created = PayPalPayment.objects.get_or_create(
+        payment=payment, defaults={"paypal_order_id": result["id"], "status": "created"}
+    )
+    if not created:
+        logger.warning(f"PayPalPayment already existed for order {order.id}")
 
     return {
         "checkout_url": approval_url,
