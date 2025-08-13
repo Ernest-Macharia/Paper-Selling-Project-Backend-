@@ -3,20 +3,9 @@ from django.conf import settings
 
 from payments.models import Payment
 from paypal_api.models import PayPalPayment
+from paypal_api.utils import get_paypal_access_token
 
 DEFAULT_TIMEOUT = 60
-
-
-def get_paypal_access_token():
-    response = requests.post(
-        f"{settings.PAYPAL_API_BASE}/v1/oauth2/token",
-        auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
-        headers={"Accept": "application/json"},
-        data={"grant_type": "client_credentials"},
-        timeout=DEFAULT_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()["access_token"]
 
 
 def handle_paypal_checkout(order):
@@ -31,7 +20,7 @@ def handle_paypal_checkout(order):
         "purchase_units": [
             {
                 "amount": {
-                    "currency_code": "USD" or "USD",
+                    "currency_code": "USD",
                     "value": f"{order.price:.2f}",
                 },
                 "description": f"Purchase of {first_paper.title}",
@@ -48,7 +37,11 @@ def handle_paypal_checkout(order):
     }
 
     response = requests.post(
-        f"{settings.PAYPAL_API_BASE}/v2/checkout/orders",
+        (
+            "https://api-m.sandbox.paypal.com/v2/checkout/orders"
+            if settings.PAYPAL_MODE != "live"
+            else "https://api-m.paypal.com/v2/checkout/orders"
+        ),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {access_token}",
@@ -65,7 +58,6 @@ def handle_paypal_checkout(order):
     if not approval_url:
         raise Exception("Approval URL not found in PayPal response")
 
-    # Save to DB
     payment = Payment.objects.create(
         gateway="paypal",
         external_id=result["id"],

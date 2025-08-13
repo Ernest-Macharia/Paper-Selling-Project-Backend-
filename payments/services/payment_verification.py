@@ -4,8 +4,8 @@ import requests
 import stripe
 from django.conf import settings
 
-from paypal_api.checkout import get_paypal_access_token
 from paypal_api.models import PayPalPayment
+from paypal_api.utils import get_paypal_access_token
 from pesapal.checkout import get_pesapal_auth_token
 
 logger = logging.getLogger(__name__)
@@ -28,42 +28,50 @@ def verify_stripe_payment(session_id, order):
 
 def verify_paypal_payment(session_id, order):
     access_token = get_paypal_access_token()
-
     logger.info(f"[PayPal] Verifying session_id: {session_id} for order: {order.id}")
 
-    paypal_payment = PayPalPayment.objects.filter(
-        payment__order=order, paypal_order_id=session_id
-    ).first()
-
-    if not paypal_payment:
-        logger.error(
-            f"[PayPal] No PayPalPayment found for\
-            order {order.id} with session_id/token {session_id}"
+    try:
+        capture_url = (
+            f"https://api-m.sandbox.paypal.com/v2/checkout/orders/{session_id}/capture"
+            if settings.PAYPAL_MODE != "live"
+            else f"https://api-m.paypal.com/v2/checkout/orders/{session_id}/capture"
         )
-        return False
 
-    payment_id = paypal_payment.paypal_order_id
-    response = requests.get(
-        f"{settings.PAYPAL_API_BASE}/v2/checkout/orders/{payment_id}",
-        headers={"Authorization": f"Bearer {access_token}"},
-        timeout=DEFAULT_TIMEOUT,
-    )
+        capture_response = requests.post(
+            capture_url,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=DEFAULT_TIMEOUT,
+        )
 
-    if response.status_code != 200:
-        logger.error(f"[PayPal] Could not fetch order {payment_id}: {response.text}")
-        return False
+        if capture_response.status_code != 201:
+            logger.error(f"[PayPal] Capture failed: {capture_response.text}")
+            return False
 
-    order_data = response.json()
-    logger.info(f"[PayPal] Order data: {order_data}")
+        capture_data = capture_response.json()
+        logger.info(f"[PayPal] Capture data: {capture_data}")
 
-    if order_data["status"] == "COMPLETED":
-        order.status = "completed"
-        order.save(update_fields=["status"])
-        paypal_payment.payment.status = "completed"
-        paypal_payment.payment.save(update_fields=["status"])
-        return True
+        if capture_data.get("status") == "COMPLETED":
+            order.status = "completed"
+            order.save(update_fields=["status"])
 
-    logger.warning(f"[PayPal] Order {payment_id} status is not COMPLETED")
+            paypal_payment = PayPalPayment.objects.get(paypal_order_id=session_id)
+            paypal_payment.status = "captured"
+            paypal_payment.payment.status = "completed"
+            paypal_payment.payment.save(update_fields=["status"])
+
+            purchase_units = capture_data.get("purchase_units", [])
+            if purchase_units:
+                captures = purchase_units[0].get("payments", {}).get("captures", [])
+                if captures:
+                    paypal_payment.transaction_id = captures[0].get("id")
+                    paypal_payment.capture_status = captures[0].get("status")
+                    paypal_payment.save()
+
+            return True
+
+    except Exception as e:
+        logger.exception(f"[PayPal] Error during verification: {e}")
+
     return False
 
 

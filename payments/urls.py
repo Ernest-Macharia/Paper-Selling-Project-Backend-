@@ -13,6 +13,8 @@ from payments.views import (
     PayoutInfoView,
     WalletSummaryView,
     WithdrawalRequestViewSet,
+    paypal_payment_cancel,
+    paypal_payment_success,
     stripe_oauth_callback,
     update_payout_info,
     verify_payment,
@@ -30,6 +32,8 @@ urlpatterns = [
     path(
         "checkout/initiate/", CheckoutInitiateView.as_view(), name="checkout_initiate"
     ),
+    path("success/", paypal_payment_success, name="paypal-payment-success"),
+    path("cancel/", paypal_payment_cancel, name="paypal-payment-cancel"),
     path("verify/", verify_payment, name="verify-payment"),
     path("payout-info/", PayoutInfoView.as_view(), name="payout-info"),
     path("payments/payout-info/update/", update_payout_info, name="update-payout-info"),

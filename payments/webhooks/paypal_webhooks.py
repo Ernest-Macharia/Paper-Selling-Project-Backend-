@@ -4,8 +4,10 @@ import logging
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from payments.models import Payment, PaymentEvent
+from payments.models import Payment
 from payments.services.payment_update_service import update_payment_status
+from payments.utils.paypal_verification import verify_paypal_signature
+from paypal_api.models import PayPalPayment
 
 logger = logging.getLogger(__name__)
 
@@ -14,58 +16,48 @@ logger = logging.getLogger(__name__)
 def handle_paypal_event(request):
     try:
         payload = json.loads(request.body)
-    except json.JSONDecodeError as e:
-        logger.error("[PayPal Webhook] JSON decode error: %s", e)
-        return HttpResponse("Invalid JSON", status=400)
+        event_type = payload.get("event_type")
+        resource = payload.get("resource", {})
+        order_id = resource.get("id")
 
-    event_type = payload.get("event_type")
-    resource = payload.get("resource", {})
-    invoice_number = resource.get("invoice_number")
-    fallback_id = resource.get("id")
+        logger.info(f"Received PayPal webhook: {event_type} for order {order_id}")
 
-    logger.info(f"[PayPal Webhook] Received event: {event_type}")
+        if not verify_paypal_signature(request):
+            return HttpResponse("Invalid signature", status=400)
 
-    payment = (
-        Payment.objects.filter(external_id=fallback_id).first()
-        or Payment.objects.filter(external_id=invoice_number).first()
-    )
+        try:
+            payment = Payment.objects.get(external_id=order_id, gateway="paypal")
+            order = payment.order
 
-    if payment:
-        logger.info(f"[PayPal Webhook] Matched payment ID: {payment.id}")
-        PaymentEvent.objects.create(
-            payment=payment,
-            gateway="paypal",
-            event_type=event_type,
-            raw_data=payload,
-        )
+            if event_type == "PAYMENT.CAPTURE.COMPLETED":
+                # Update payment status
+                payment.status = "completed"
+                payment.save()
 
-        if (
-            event_type
-            in [
-                "PAYMENT.SALE.COMPLETED",
-                "PAYMENT.CAPTURE.COMPLETED",
-                "CHECKOUT.ORDER.COMPLETED",
-            ]
-            and payment
-        ):
-            update_payment_status(payment.external_id, "completed")
-            logger.info(
-                f"[PayPal Webhook] Payment marked as completed: {payment.external_id}"
-            )
+                # Update PayPal payment record
+                paypal_payment = PayPalPayment.objects.get(payment=payment)
+                paypal_payment.status = "captured"
+                paypal_payment.transaction_id = resource.get("id")
+                paypal_payment.save()
 
-        if event_type in ["PAYMENT.SALE.DENIED", "PAYMENT.SALE.REFUNDED"] and payment:
-            update_payment_status(payment.external_id, "refunded")
-            logger.warning(
-                f"[PayPal Webhook] Payment was refunded or denied: {payment.external_id}"
-            )
-        elif event_type in ["PAYMENT.CAPTURE.PENDING", "CHECKOUT.ORDER.PROCESSING"]:
-            update_payment_status(payment.external_id, "pending")
-        elif event_type in ["PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.FAILED"]:
-            update_payment_status(payment.external_id, "failed")
+                # Update order status
+                order.status = "completed"
+                order.save()
 
-    else:
-        logger.warning(
-            f"[PayPal Webhook] No payment found for external ID: {fallback_id} or invoice: {invoice_number}"
-        )
+                # Update wallet balances
+                update_payment_status(payment.external_id, "completed", "paypal")
 
-    return HttpResponse(status=200)
+            elif event_type == "PAYMENT.CAPTURE.DENIED":
+                order.status = "failed"
+                order.save()
+                payment.status = "failed"
+                payment.save()
+
+        except Payment.DoesNotExist:
+            logger.warning(f"Payment not found for PayPal order {order_id}")
+
+        return HttpResponse(status=200)
+
+    except Exception as e:
+        logger.error(f"Error processing PayPal webhook: {str(e)}")
+        return HttpResponse(status=500)

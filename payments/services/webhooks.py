@@ -25,8 +25,7 @@ def stripe_webhook(request):
 @csrf_exempt
 def paypal_webhook(request):
     try:
-        payload = json.loads(request.body)
-        if not verify_paypal_signature(request.headers, payload):
+        if not verify_paypal_signature(request):
             logger.warning("Invalid PayPal webhook signature")
             return HttpResponse("Invalid signature", status=400)
 
