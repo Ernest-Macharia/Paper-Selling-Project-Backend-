@@ -22,7 +22,10 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "order_id",
+        "external_id",
         "gateway",
+        "status",
+        "order",
         "amount",
         "currency",
         "status",

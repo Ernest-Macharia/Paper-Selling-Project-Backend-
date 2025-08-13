@@ -101,28 +101,26 @@ def paypal_payment_success(request):
     try:
         order = Order.objects.get(id=order_id)
         payment = Payment.objects.get(order=order, gateway="paypal")
-        # First try to verify normally
+
+        # First try normal verification
         if verify_paypal_payment(token, order):
+            update_payment_status(payment.external_id, "completed", "paypal")
             return redirect(
                 f"{settings.BASE_URL}/payment/success?order_id={order_id}&token={token}"
             )
 
-        # If normal verification fails, check via PayPal API
+        # If verification failed, try direct PayPal API check
         access_token = get_paypal_access_token()
         order_url = f"{settings.PAYPAL_API_BASE}/v2/checkout/orders/{token}"
         headers = {"Authorization": f"Bearer {access_token}"}
         order_response = requests.get(
             order_url, headers=headers, timeout=DEFAULT_TIMEOUT
         )
+
         if order_response.status_code == 200:
             order_data = order_response.json()
             if order_data.get("status") == "APPROVED":
-                # Manually complete the order
-                order.status = "completed"
-                order.save()
-                payment.status = "completed"
-                update_payment_status(token, "completed", "paypal")
-                payment.save()
+                update_payment_status(payment.external_id, "completed", "paypal")
                 return redirect(
                     f"{settings.BASE_URL}/payment/success?order_id={order_id}&token={token}"
                 )
