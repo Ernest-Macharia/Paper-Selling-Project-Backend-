@@ -89,7 +89,25 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return Paper.objects.all().select_related("category", "course", "school")
+        return Paper.objects.select_related("category", "course", "school").only(
+            "id",
+            "title",
+            "description",
+            "file",
+            "preview_file",
+            "price",
+            "status",
+            "category_id",
+            "course_id",
+            "school_id",
+            "page_count",
+            "views",
+            "downloads",
+            "upload_date",
+            "author_id",
+            "is_free",
+            "year",
+        )
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
