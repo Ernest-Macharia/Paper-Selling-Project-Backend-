@@ -358,6 +358,31 @@ class PaperSerializer(serializers.ModelSerializer):
         return data
 
 
+class PaperListSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    course = CourseSerializer(read_only=True)
+    school = SchoolSerializer(read_only=True)
+
+    download_count = serializers.IntegerField(read_only=True)
+    average_rating = serializers.FloatField(read_only=True)
+    review_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Paper
+        fields = [
+            "id",
+            "title",
+            "price",
+            "upload_date",
+            "category",
+            "course",
+            "school",
+            "download_count",
+            "average_rating",
+            "review_count",
+        ]
+
+
 class SchoolDetailSerializer(serializers.ModelSerializer):
     papers = PaperSerializer(many=True, read_only=True)
     courses = serializers.SerializerMethodField()

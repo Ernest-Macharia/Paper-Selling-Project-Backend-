@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, F, OuterRef, Prefetch, Q, Subquery, Sum
 from django.http import FileResponse
@@ -38,6 +39,7 @@ from .serializers import (
     CategorySerializer,
     CourseSerializer,
     OrderSerializer,
+    PaperListSerializer,
     PaperReviewSerializer,
     PaperSerializer,
     SchoolDetailSerializer,
@@ -91,8 +93,8 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
-class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
-    serializer_class = PaperSerializer
+class LatestPapersView(generics.ListAPIView):
+    serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = None
 
@@ -100,8 +102,31 @@ class LatestPapersView(PaperFilterMixin, generics.ListAPIView):
         return (
             Paper.objects.filter(status="published")
             .select_related("category", "course", "school")
-            .order_by("-upload_date")
+            .only(
+                "id",
+                "title",
+                "upload_date",
+                "price",
+                "status",
+                "is_free",
+                "category__name",
+                "course__name",
+                "school__name",
+            )
+            .order_by("-upload_date")[:8]
         )
+
+    def list(self, request, *args, **kwargs):
+        cache_key = "latest_papers_json"
+        data = cache.get(cache_key)
+        if not data:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(
+                queryset, many=True, context={"request": request}
+            )
+            data = serializer.data
+            cache.set(cache_key, data, 300)
+        return Response(data)
 
 
 class UserUploadsView(generics.ListAPIView):
