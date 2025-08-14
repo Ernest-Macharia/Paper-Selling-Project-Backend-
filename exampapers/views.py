@@ -234,7 +234,7 @@ class PaperDetailView(APIView):
 
 
 class PapersByAuthorView(generics.ListAPIView):
-    serializer_class = PaperSerializer
+    serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = None
 
@@ -772,29 +772,35 @@ class DashboardStatsView(APIView):
         user = request.user
         today = now().date()
 
-        # 🌐 Global Statistics
-        papers_qs = Paper.objects.filter(status="published")
+        # --- 🌐 Global Stats in ONE query ---
+        global_stats = Paper.objects.filter(status="published").aggregate(
+            total_papers=Count("id"),
+            total_downloads=Sum("downloads"),
+            total_uploads=Sum("uploads"),
+            total_views=Sum("views"),
+            total_earnings=Sum("earnings"),
+        )
+
         total_users = User.objects.count()
-        total_papers = papers_qs.count()
-        total_downloads = papers_qs.aggregate(total=Sum("downloads"))["total"] or 0
-        total_uploads = papers_qs.aggregate(total=Sum("uploads"))["total"] or 0
-        total_views = papers_qs.aggregate(total=Sum("views"))["total"] or 0
-        total_earnings = papers_qs.aggregate(total=Sum("earnings"))["total"] or 0
         total_orders = Order.objects.count()
         completed_orders = Order.objects.filter(status="completed").count()
         new_users_today = User.objects.filter(date_joined__date=today).count()
         papers_uploaded_today = Paper.objects.filter(upload_date__date=today).count()
 
-        # 👤 User-specific Stats
-        user_papers = Paper.objects.filter(author=user)
+        # --- 👤 User Stats in ONE query ---
+        user_papers_stats = Paper.objects.filter(author=user).aggregate(
+            user_papers_uploaded=Count("id"),
+            user_total_views=Sum("views"),
+            user_total_earnings_from_papers=Sum("earnings"),
+        )
+
+        # Single count queries for smaller datasets
         user_downloaded_papers = PaperDownload.objects.filter(user=user).count()
-        user_views = user_papers.aggregate(total=Sum("views"))["total"] or 0
-        user_earnings = user_papers.aggregate(total=Sum("earnings"))["total"] or 0
         user_orders = Order.objects.filter(user=user)
         user_reviews = Review.objects.filter(user=user).count()
         user_wishlist_count = Wishlist.objects.filter(user=user).count()
 
-        # ✅ Wallet Earnings
+        # ✅ Wallet
         wallet, _ = Wallet.objects.get_or_create(user=user)
 
         return Response(
@@ -802,25 +808,27 @@ class DashboardStatsView(APIView):
                 # 🌐 Platform-wide
                 "total_users": total_users,
                 "new_users_today": new_users_today,
-                "total_papers": total_papers,
+                "total_papers": global_stats["total_papers"] or 0,
                 "papers_uploaded_today": papers_uploaded_today,
-                "total_downloads": total_downloads,
-                "total_uploads": total_uploads,
-                "total_views": total_views,
+                "total_downloads": global_stats["total_downloads"] or 0,
+                "total_uploads": global_stats["total_uploads"] or 0,
+                "total_views": global_stats["total_views"] or 0,
                 "total_orders": total_orders,
                 "completed_orders": completed_orders,
-                "total_earnings": float(total_earnings),
+                "total_earnings": float(global_stats["total_earnings"] or 0),
                 # 👤 User-specific
                 "user_name": user.get_full_name() or user.username,
-                "user_papers_uploaded": user_papers.count(),
+                "user_papers_uploaded": user_papers_stats["user_papers_uploaded"] or 0,
                 "user_total_downloads": user_downloaded_papers,
-                "user_total_views": user_views,
-                "user_total_earnings_from_papers": float(user_earnings),
+                "user_total_views": user_papers_stats["user_total_views"] or 0,
+                "user_total_earnings_from_papers": float(
+                    user_papers_stats["user_total_earnings_from_papers"] or 0
+                ),
                 "user_orders": user_orders.count(),
                 "user_completed_orders": user_orders.filter(status="completed").count(),
                 "user_review_count": user_reviews,
                 "user_wishlist_count": user_wishlist_count,
-                # 💰 Wallet Earnings
+                # 💰 Wallet
                 "wallet_total_earned": float(wallet.total_earned),
                 "wallet_total_withdrawn": float(wallet.total_withdrawn),
                 "wallet_available_balance": float(wallet.available_balance),
