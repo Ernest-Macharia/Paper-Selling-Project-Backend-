@@ -84,7 +84,7 @@ class PaperFilterMixin:
 
 
 class AllPapersView(PaperFilterMixin, generics.ListAPIView):
-    serializer_class = PaperSerializer
+    serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = None
 
@@ -99,18 +99,9 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
                 "author__papers__reviews",
             )
             .annotate(
-                total_papers_sold=Count("order", filter=Q(order__status="completed")),
                 download_count=Count("paperdownload"),
                 average_rating=Avg("reviews__rating"),
                 review_count=Count("reviews"),
-                author_papers_count=Count(
-                    "author__papers", filter=Q(author__papers__status="published")
-                ),
-                author_papers_sold=Count(
-                    "author__papers",
-                    filter=Q(author__papers__status="published")
-                    & ~Q(author__papers__is_free=True),
-                ),
             )
         )
 
