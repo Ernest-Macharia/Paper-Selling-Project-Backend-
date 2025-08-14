@@ -89,12 +89,38 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return Paper.objects.select_related("category", "course", "school").only(
+
+        qs = (
+            Paper.objects.select_related("category", "course", "school", "author")
+            .prefetch_related(
+                "reviews",
+                "paperdownload_set",
+                "author__papers",
+                "author__papers__reviews",
+            )
+            .annotate(
+                total_papers_sold=Count("order", filter=Q(order__status="completed")),
+                download_count=Count("paperdownload"),
+                average_rating=Avg("reviews__rating"),
+                review_count=Count("reviews"),
+                author_papers_count=Count(
+                    "author__papers", filter=Q(author__papers__status="published")
+                ),
+                author_papers_sold=Count(
+                    "author__papers",
+                    filter=Q(author__papers__status="published")
+                    & ~Q(author__papers__is_free=True),
+                ),
+            )
+        )
+
+        return qs.only(
             "id",
             "title",
             "description",
             "file",
             "preview_file",
+            "preview_image",
             "price",
             "status",
             "category_id",
@@ -355,21 +381,19 @@ class CategoryListView(generics.ListAPIView):
     ordering = ["-paper_count"]
 
     def get_queryset(self):
-        return Category.objects.annotate(
+        qs = Category.objects.prefetch_related("papers", "papers__reviews").annotate(
             paper_count=Count("papers", filter=Q(papers__status="published")),
             average_price=Avg("papers__price", filter=Q(papers__status="published")),
-            average_rating=Avg("papers__reviews__rating"),
+            average_rating=Avg(
+                "papers__reviews__rating", filter=Q(papers__status="published")
+            ),
         )
 
-    def get_paginated_response(self, data):
-        if self.request.query_params.get("all") == "true":
-            return Response(data)
-        return super().get_paginated_response(data)
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(name__icontains=search)
 
-    def paginate_queryset(self, queryset):
-        if self.request.query_params.get("all") == "true":
-            return None
-        return super().paginate_queryset(queryset)
+        return qs
 
 
 class CourseListView(generics.ListAPIView):

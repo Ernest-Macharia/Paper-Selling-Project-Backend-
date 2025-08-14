@@ -127,13 +127,13 @@ class PaperSerializer(serializers.ModelSerializer):
     document_url = serializers.SerializerMethodField()
     author_info = serializers.SerializerMethodField()
     pages = serializers.SerializerMethodField()
-    total_papers_sold = serializers.SerializerMethodField()
+    total_papers_sold = serializers.SerializerMethodField(read_only=True)
     reviews = PaperReviewSerializer(many=True, read_only=True)
-    average_rating = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField(read_only=True)
     review_count = serializers.IntegerField(source="reviews.count", read_only=True)
     preview_url = serializers.SerializerMethodField()
     preview_image = serializers.SerializerMethodField()
-    download_count = serializers.SerializerMethodField()
+    download_count = serializers.SerializerMethodField(read_only=True)
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
 
@@ -277,8 +277,8 @@ class PaperSerializer(serializers.ModelSerializer):
         return obj.reviews.aggregate(avg=Avg("rating"))["avg"] or 0
 
     def get_author_info(self, obj):
-        user = obj.author
         request = self.context.get("request")
+        user = obj.author
         avatar_url = (
             request.build_absolute_uri(user.avatar.url)
             if user.avatar and request
@@ -288,14 +288,18 @@ class PaperSerializer(serializers.ModelSerializer):
         return {
             "id": user.id,
             "name": user.username,
-            "email": user.email if user == request.user else None,
+            "email": user.email if request.user == user else None,
             "avatar": avatar_url,
-            "papers_count": user.papers.filter(
-                status="published"
-            ).count(),  # Total published papers
-            "papers_sold": user.papers.filter(status="published")
-            .exclude(is_free=True)
-            .count(),  # Only paid papers
+            "papers_count": getattr(
+                obj,
+                "author_papers_count",
+                user.papers.filter(status="published").count(),
+            ),
+            "papers_sold": getattr(
+                obj,
+                "author_papers_sold",
+                user.papers.filter(status="published").exclude(is_free=True).count(),
+            ),
         }
 
     def get_can_edit(self, obj):
