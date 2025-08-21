@@ -763,32 +763,57 @@ class SchoolDetailView(generics.RetrieveAPIView):
             Prefetch(
                 "papers",
                 queryset=Paper.objects.filter(status="published")
+                .only("id", "title", "price", "upload_date", "course_id", "category_id")
                 .select_related("course", "category")
                 .annotate(
-                    download_count=Count("downloads"), review_count=Count("reviews")
+                    download_count=Count("downloads"),
+                    review_count=Count("reviews"),
                 ),
             ),
-            Prefetch("papers__course", queryset=Course.objects.all()),
+            Prefetch("papers__course", queryset=Course.objects.only("id", "name")),
         )
+
+
+class SchoolPapersPagination(PageNumberPagination):
+    page_size = 9
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class SchoolPapersView(generics.ListAPIView):
     serializer_class = PaperSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = PageNumberPagination
+    pagination_class = SchoolPapersPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    search_fields = ["title"]
+    ordering_fields = [
+        "title",
+        "upload_date",
+        "price",
+        "download_count",
+        "review_count",
+    ]
+    ordering = ["-upload_date"]
 
     def get_queryset(self):
         school_id = self.kwargs["pk"]
         return (
             Paper.objects.filter(school_id=school_id, status="published")
             .select_related("course", "category", "school")
-            .annotate(download_count=Count("downloads"), review_count=Count("reviews"))
-            .order_by("-upload_date")
+            .annotate(
+                download_count=Count("downloads"),
+                review_count=Count("reviews"),
+            )
         )
 
 
 class SchoolCoursesPagination(PageNumberPagination):
-    page_size = 8
+    page_size = 12
     page_size_query_param = "page_size"
     max_page_size = 100
 
@@ -797,20 +822,26 @@ class SchoolCoursesView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = SchoolCoursesPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    search_fields = ["name"]
+    ordering_fields = ["name", "paper_count"]
+    ordering = ["name"]
 
     def get_queryset(self):
         school_id = self.kwargs["pk"]
-        queryset = (
+        return (
             Course.objects.filter(
-                papers__school_id=school_id, papers__status="published"
+                papers__school_id=school_id,
+                papers__status="published",
             )
             .annotate(paper_count=Count("papers", filter=Q(papers__status="published")))
             .distinct()
-            .order_by("name")
         )
-
-        print(f"Total courses found: {queryset.count()}")
-        return queryset
 
 
 class UserOrderListView(generics.ListAPIView):
