@@ -93,43 +93,40 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = PaperPagination
-
-    def get_queryset(self):
-        return (
-            Paper.objects.select_related("category", "course", "school", "author")
-            .prefetch_related(
-                "reviews",
-                "paperdownload_set",
-                "author__papers",
-                "author__papers__reviews",
-            )
-            .annotate(
-                download_count=Count("paperdownload", distinct=True),
-                average_rating=Avg("reviews__rating"),
-                review_count=Count("reviews", distinct=True),
-            )
-            .only(
-                "id",
-                "title",
-                "description",
-                "file",
-                "preview_file",
-                "preview_image",
-                "price",
-                "status",
-                "category_id",
-                "course_id",
-                "school_id",
-                "page_count",
-                "views",
-                "downloads",
-                "upload_date",
-                "author_id",
-                "is_free",
-                "year",
-            )
-            .order_by("-upload_date")
+    queryset = (
+        Paper.objects.select_related("category", "course", "school", "author")
+        .prefetch_related(
+            "reviews",
+            "paperdownload_set",
+            "author__papers",
+            "author__papers__reviews",
         )
+        .annotate(
+            download_count=Count("paperdownload", distinct=True),
+            average_rating=Avg("reviews__rating"),
+            review_count=Count("reviews", distinct=True),
+        )
+        .only(
+            "id",
+            "title",
+            "description",
+            "file",
+            "preview_file",
+            "preview_image",
+            "price",
+            "status",
+            "category_id",
+            "course_id",
+            "school_id",
+            "page_count",
+            "views",
+            "downloads",
+            "upload_date",
+            "author_id",
+            "is_free",
+            "year",
+        )
+    )
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
@@ -395,7 +392,7 @@ class CategoryListView(generics.ListAPIView):
 class CourseListView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = PageNumberPagination
+    pagination_class = PaperPagination
 
     filter_backends = [
         DjangoFilterBackend,
