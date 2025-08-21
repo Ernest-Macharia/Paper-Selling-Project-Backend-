@@ -362,7 +362,7 @@ class PaperUploadView(generics.CreateAPIView):
 class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = PageNumberPagination
+    pagination_class = PaperPagination
 
     filter_backends = [
         DjangoFilterBackend,
@@ -382,7 +382,14 @@ class CategoryListView(generics.ListAPIView):
             ),
         )
 
-        search = self.request.query_params.get("search")
+        request = self.request
+        search = request.query_params.get("search")
+        ordering = request.query_params.get("ordering")
+        page = request.query_params.get("page")
+
+        if not search and not ordering and (page in [None, "1"]):
+            return qs.order_by("-paper_count")[:12]
+
         if search:
             qs = qs.filter(name__icontains=search)
 
@@ -430,6 +437,9 @@ class CourseListView(generics.ListAPIView):
             average_rating=Avg("papers__reviews__rating"),
             school_name=Subquery(first_school_subquery),
         )
+
+        if not search and not school_name and not ordering and not all_param:
+            return queryset.order_by("-paper_count")[:12]
 
         if search:
             queryset = queryset.filter(Q(name__icontains=search))
@@ -643,35 +653,14 @@ class UserUploadSchoolListView(generics.ListAPIView):
 class SchoolListView(generics.ListAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = PageNumberPagination
-
-    def get_queryset(self):
-        queryset = School.objects.annotate(
-            paper_count=Count("papers", filter=Q(papers__status="published")),
-            course_count=Count("papers__course", distinct=True),
-            average_rating=Avg("papers__reviews__rating"),
-            total_downloads=Sum("papers__downloads"),
-        ).order_by("-paper_count")
-
-        search_query = self.request.query_params.get("search", "")
-        if search_query:
-            queryset = queryset.filter(Q(name__icontains=search_query))
-
-        # Ordering
-        ordering = self.request.query_params.get("ordering", "")
-        if ordering:
-            queryset = queryset.order_by(ordering)
-
-        return queryset
+    pagination_class = PaperPagination
 
     filter_backends = [
         filters.SearchFilter,
         filters.OrderingFilter,
         DjangoFilterBackend,
     ]
-    search_fields = [
-        "name",
-    ]
+    search_fields = ["name"]
     ordering_fields = [
         "name",
         "paper_count",
@@ -679,6 +668,34 @@ class SchoolListView(generics.ListAPIView):
         "average_rating",
         "total_downloads",
     ]
+    ordering = ["-paper_count"]
+
+    def get_queryset(self):
+        qs = School.objects.annotate(
+            paper_count=Count("papers", filter=Q(papers__status="published")),
+            course_count=Count(
+                "papers__course", filter=Q(papers__status="published"), distinct=True
+            ),
+            average_rating=Avg(
+                "papers__reviews__rating", filter=Q(papers__status="published")
+            ),
+            total_downloads=Sum(
+                "papers__downloads", filter=Q(papers__status="published")
+            ),
+        )
+
+        request = self.request
+        search = request.query_params.get("search")
+        ordering = request.query_params.get("ordering")
+        page = request.query_params.get("page")
+
+        if not search and not ordering and (page in [None, "1"]):
+            return qs.order_by("-paper_count")[:12]
+
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        return qs
 
 
 class SchoolDetailView(generics.RetrieveAPIView):
