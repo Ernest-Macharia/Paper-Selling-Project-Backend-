@@ -3,7 +3,9 @@ from django.urls import path
 from .views import (
     AllPapersView,
     CategoryListView,
+    CategoryPapersView,
     CourseListView,
+    CoursePapersView,
     CreateOrderView,
     DashboardStatsView,
     GivenReviewsListAPIView,
@@ -36,7 +38,13 @@ from .views import (
 urlpatterns = [
     path("upload/", PaperUploadView.as_view(), name="upload"),
     path("categories/", CategoryListView.as_view(), name="category-list"),
+    path(
+        "categories/category-papers/",
+        CategoryPapersView.as_view(),
+        name="categories-papers",
+    ),
     path("courses/", CourseListView.as_view(), name="course-list"),
+    path("courses/course-papers/", CoursePapersView.as_view(), name="courses-papers"),
     path("popular-courses/", PopularCoursesView.as_view(), name="popular-courses"),
     path("upload-courses/", UploaadCourseListView.as_view(), name="upload-courses"),
     path(

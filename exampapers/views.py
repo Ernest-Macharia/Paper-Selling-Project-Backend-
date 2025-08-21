@@ -465,6 +465,56 @@ class CourseListView(generics.ListAPIView):
         return Response({"results": data, "count": len(data)})
 
 
+class CoursePapersView(generics.ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = PaperPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    search_fields = ["title"]
+    ordering_fields = ["title", "upload_date", "price"]
+    ordering = ["-upload_date"]
+
+    def get_queryset(self):
+        course_id = self.request.query_params.get("course")
+        qs = Paper.objects.filter(status="published")
+
+        if course_id:
+            qs = qs.filter(course_id=course_id)
+
+        return qs.select_related("course", "school").prefetch_related("reviews")
+
+
+class CategoryPapersView(generics.ListAPIView):
+    serializer_class = PaperSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = PaperPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    search_fields = ["title"]
+    ordering_fields = ["title", "upload_date", "price"]
+    ordering = ["-upload_date"]
+
+    def get_queryset(self):
+        category_id = self.request.query_params.get("category")
+        qs = Paper.objects.filter(status="published")
+
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+
+        return qs.select_related("category", "course", "school").prefetch_related(
+            "reviews"
+        )
+
+
 class UploaadCourseListView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
