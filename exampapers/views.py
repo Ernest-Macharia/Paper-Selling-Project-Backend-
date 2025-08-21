@@ -54,6 +54,12 @@ class NoPagination(PageNumberPagination):
     page_size = None
 
 
+class PaperPagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class PaperFilterMixin:
     filter_backends = [
         DjangoFilterBackend,
@@ -86,11 +92,10 @@ class PaperFilterMixin:
 class AllPapersView(PaperFilterMixin, generics.ListAPIView):
     serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = None
+    pagination_class = PaperPagination
 
     def get_queryset(self):
-
-        qs = (
+        return (
             Paper.objects.select_related("category", "course", "school", "author")
             .prefetch_related(
                 "reviews",
@@ -99,31 +104,31 @@ class AllPapersView(PaperFilterMixin, generics.ListAPIView):
                 "author__papers__reviews",
             )
             .annotate(
-                download_count=Count("paperdownload"),
+                download_count=Count("paperdownload", distinct=True),
                 average_rating=Avg("reviews__rating"),
-                review_count=Count("reviews"),
+                review_count=Count("reviews", distinct=True),
             )
-        )
-
-        return qs.only(
-            "id",
-            "title",
-            "description",
-            "file",
-            "preview_file",
-            "preview_image",
-            "price",
-            "status",
-            "category_id",
-            "course_id",
-            "school_id",
-            "page_count",
-            "views",
-            "downloads",
-            "upload_date",
-            "author_id",
-            "is_free",
-            "year",
+            .only(
+                "id",
+                "title",
+                "description",
+                "file",
+                "preview_file",
+                "preview_image",
+                "price",
+                "status",
+                "category_id",
+                "course_id",
+                "school_id",
+                "page_count",
+                "views",
+                "downloads",
+                "upload_date",
+                "author_id",
+                "is_free",
+                "year",
+            )
+            .order_by("-upload_date")
         )
 
 
