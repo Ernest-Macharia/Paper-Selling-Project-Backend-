@@ -238,30 +238,28 @@ class PaperDetailView(APIView):
 class PapersByAuthorView(generics.ListAPIView):
     serializer_class = PaperListSerializer
     permission_classes = [permissions.AllowAny]
-    pagination_class = None
+    pagination_class = PaperPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    filterset_fields = ["category__name", "course__name", "school__name", "is_free"]
+    search_fields = ["title"]
+    ordering_fields = ["title", "price", "upload_date", "school__name"]
 
     def get_queryset(self):
         author_id = self.kwargs["author_id"]
-        return (
-            Paper.objects.filter(author_id=author_id, status="published")
-            .select_related("category", "course", "school")
-            .order_by("-upload_date")
-        )
+        return Paper.objects.filter(
+            author_id=author_id, status="published"
+        ).select_related("category", "course", "school")
 
     def list(self, request, *args, **kwargs):
-        try:
-            queryset = self.get_queryset()
-            serializer = self.get_serializer(queryset, many=True)
-            author = User.objects.filter(id=kwargs["author_id"]).first()
-
-            response_data = {
-                "papers": serializer.data,
-                "author_name": author.username if author else None,
-            }
-
-            return Response(response_data)
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
+        response = super().list(request, *args, **kwargs)
+        author = User.objects.filter(id=kwargs["author_id"]).first()
+        response.data["author_name"] = author.username if author else None
+        return response
 
 
 class PaperFilter(FilterSet):
