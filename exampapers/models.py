@@ -239,11 +239,11 @@ class Paper(models.Model):
             return
         try:
             images = convert_from_bytes(
-                pdf_buffer.getvalue(), dpi=100, first_page=1, last_page=1, fmt="jpeg"
+                pdf_buffer.getvalue(), dpi=300, first_page=1, last_page=1, fmt="jpeg"
             )
             if images:
                 img_buffer = BytesIO()
-                images[0].save(img_buffer, format="JPEG", quality=85)
+                images[0].save(img_buffer, format="JPEG", quality=95)
                 img_buffer.seek(0)
                 preview_image_name = f"{os.path.splitext(os.path.basename(self.file.name))[0]}_preview.jpg"
                 self.preview_image.save(
