@@ -378,6 +378,7 @@ class PaperListSerializer(serializers.ModelSerializer):
             "title",
             "price",
             "upload_date",
+            "description",
             "category",
             "course",
             "school",
