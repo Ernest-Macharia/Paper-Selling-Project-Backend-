@@ -773,7 +773,7 @@ class SchoolDetailView(generics.RetrieveAPIView):
 
 
 class SchoolPapersPagination(PageNumberPagination):
-    page_size = 9
+    page_size = 12
     page_size_query_param = "page_size"
     max_page_size = 100
 
@@ -802,16 +802,17 @@ class SchoolPapersView(generics.ListAPIView):
         school_id = self.kwargs["pk"]
         return (
             Paper.objects.filter(school_id=school_id, status="published")
-            .select_related("course", "category", "school")
+            .select_related("course", "category")
+            .only("id", "title", "price", "upload_date", "course_id", "category_id")
             .annotate(
-                download_count=Count("downloads"),
-                review_count=Count("reviews"),
+                download_count=Count("downloads", distinct=True),
+                review_count=Count("reviews", distinct=True),
             )
         )
 
 
 class SchoolCoursesPagination(PageNumberPagination):
-    page_size = 12
+    page_size = 8
     page_size_query_param = "page_size"
     max_page_size = 100
 

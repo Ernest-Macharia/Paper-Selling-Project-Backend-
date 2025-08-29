@@ -5,6 +5,7 @@ import requests
 import stripe
 from django.conf import settings
 
+from payments.services.payment_update_service import update_payment_status
 from paypal_api.utils import get_paypal_access_token
 from pesapal.checkout import get_pesapal_auth_token
 
@@ -62,7 +63,7 @@ def verify_paypal_payment(session_id, order):
         logger.info(f"[PayPal] Capture data: {capture_data}")
 
         if capture_data.get("status") == "COMPLETED":
-            # ... rest of your success handling logic ...
+            update_payment_status(order.payment.external_id, "completed", "paypal")
             return True
 
     except Exception as e:

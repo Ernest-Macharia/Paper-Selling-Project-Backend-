@@ -31,7 +31,7 @@ ALLOWED_HOSTS = [
     "www.gradesworld.com",
     "127.0.0.1",
     "localhost",
-    "7252bd26e72a.ngrok-free.app",
+    "705f88e936fe.ngrok-free.app",
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -39,7 +39,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://7252bd26e72a.ngrok-free.app",
+    "https://705f88e936fe.ngrok-free.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -47,7 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://7252bd26e72a.ngrok-free.app",
+    "https://705f88e936fe.ngrok-free.app",
 ]
 
 
