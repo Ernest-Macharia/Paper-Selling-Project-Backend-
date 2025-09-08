@@ -148,8 +148,6 @@ class Paper(models.Model):
             logger.info(f"Preview already exists for paper {self.id}, skipping.")
             return
         if not self.file:
-            return
-        if not self.file:
             logger.warning(
                 f"No file found for paper {self.id}, skipping preview generation"
             )

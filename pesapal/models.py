@@ -15,7 +15,7 @@ class PesapalPayment(models.Model):
     )
     payment = models.OneToOneField(
         "payments.Payment", on_delete=models.CASCADE, related_name="pesapal_payment"
-    )  # <- Fix here
+    )
     tracking_id = models.CharField(max_length=255, unique=True)
     merchant_reference = models.CharField(max_length=255, unique=True)
     ipn_id = models.CharField(max_length=255, blank=True, null=True)
