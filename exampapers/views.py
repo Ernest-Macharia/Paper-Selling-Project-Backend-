@@ -4,6 +4,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, F, OuterRef, Prefetch, Q, Subquery, Sum
 from django.http import FileResponse
@@ -335,12 +336,10 @@ class PaperUploadView(generics.CreateAPIView):
 
             if paper.file:
                 # Verify storage is writable
-                from django.core.files.storage import default_storage
 
                 if not default_storage.exists(paper.file.name):
                     raise ValueError("File storage not accessible")
 
-                # Call the model methods with better error handling
                 try:
                     paper.set_page_count()
                     paper.generate_preview()
@@ -349,7 +348,6 @@ class PaperUploadView(generics.CreateAPIView):
                     logger.error(
                         f"Error generating preview for paper {paper.id}: {str(e)}"
                     )
-                    # You might want to raise this or handle it differently
                     raise
 
         except Exception as e:
@@ -513,7 +511,7 @@ class CategoryPapersView(generics.ListAPIView):
         )
 
 
-class UploaadCourseListView(generics.ListAPIView):
+class UploadCourseListView(generics.ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = PageNumberPagination
@@ -851,7 +849,6 @@ class UserOrderListView(generics.ListAPIView):
         return Order.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-# Retrieve a single order by id (optional)
 class OrderDetailView(generics.RetrieveAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
@@ -871,7 +868,7 @@ class DashboardStatsView(APIView):
         user = request.user
         today = now().date()
 
-        # --- 🌐 Global Stats in ONE query ---
+        # --- Global Stats in ONE query ---
         global_stats = Paper.objects.filter(status="published").aggregate(
             total_papers=Count("id"),
             total_downloads=Sum("downloads"),
@@ -886,7 +883,7 @@ class DashboardStatsView(APIView):
         new_users_today = User.objects.filter(date_joined__date=today).count()
         papers_uploaded_today = Paper.objects.filter(upload_date__date=today).count()
 
-        # --- 👤 User Stats in ONE query ---
+        # --- User Stats in ONE query ---
         user_papers_stats = Paper.objects.filter(author=user).aggregate(
             user_papers_uploaded=Count("id"),
             user_total_views=Sum("views"),
@@ -899,7 +896,7 @@ class DashboardStatsView(APIView):
         user_reviews = Review.objects.filter(user=user).count()
         user_wishlist_count = Wishlist.objects.filter(user=user).count()
 
-        # ✅ Wallet
+        # Wallet
         wallet, _ = Wallet.objects.get_or_create(user=user)
 
         return Response(

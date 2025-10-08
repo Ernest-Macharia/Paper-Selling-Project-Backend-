@@ -19,6 +19,7 @@ from payments.views import (
     update_payout_info,
     verify_payment,
 )
+from payments.webhooks.intasend_webhooks import handle_intasend_event
 from payments.webhooks.paystack_webhooks import handle_paystack_webhook
 from payments.webhooks.pesapal_webhooks import handle_pesapal_event
 
@@ -42,6 +43,7 @@ urlpatterns = [
     path("stripe/oauth/callback/", stripe_oauth_callback, name="stripe-oauth-callback"),
     # Webhooks
     path("webhooks/stripe/", stripe_webhook, name="stripe_webhook"),
+    path("webhooks/intasend/", handle_intasend_event, name="intasend_webhook"),
     path("webhooks/paypal/", paypal_webhook, name="paypal_webhook"),
     path("webhooks/mpesa/", mpesa_webhook, name="mpesa_webhook"),
     path("webhooks/paystack/", handle_paystack_webhook),

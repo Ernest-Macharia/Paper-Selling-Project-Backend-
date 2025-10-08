@@ -33,12 +33,11 @@ def lipa_na_mpesa_direct(request):
             {"detail": "phone_number is required"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate amount
     try:
         amount = float(amount_raw)
         if amount <= 0:
             raise ValueError("Amount must be positive")
-        amount = int(round(amount))  # Safaricom requires integer amount
+        amount = int(round(amount))
     except (TypeError, ValueError):
         return Response(
             {"detail": "Invalid amount. Please provide a positive numeric amount."},

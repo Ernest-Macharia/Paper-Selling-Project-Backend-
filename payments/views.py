@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from intasend_api.verification import verify_intasend_payment
 from payments.emails import send_withdrawal_email_async
 from payments.models import Order, Payment
 from payments.serializers import WithdrawalRequestSerializer
@@ -68,6 +69,8 @@ def verify_payment(request):
             success = verify_stripe_payment(session_id, order)
         elif session_id.startswith("ORDER_"):
             success = verify_paystack_payment(session_id, order)
+        elif session_id.startswith("INV_") or session_id.startswith("IS-"):
+            success = verify_intasend_payment(session_id, order)
         else:
             success = verify_paypal_payment(session_id, order)
 

@@ -25,6 +25,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/users/", include("users.urls")),
     path("api/exampapers/", include("exampapers.urls")),
+    path("api/blog/", include("blog.urls")),
     path("api/mpesa_api/", include("mpesa_api.urls")),
     path("api/paypal_api/", include("paypal_api.urls")),
     # path("api/stripe_api/", include("stripe_api.urls")),

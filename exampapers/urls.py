@@ -28,7 +28,7 @@ from .views import (
     SchoolDetailView,
     SchoolListView,
     SchoolPapersView,
-    UploaadCourseListView,
+    UploadCourseListView,
     UserDownloadsView,
     UserOrderListView,
     UserUploadSchoolListView,
@@ -46,7 +46,7 @@ urlpatterns = [
     path("courses/", CourseListView.as_view(), name="course-list"),
     path("courses/course-papers/", CoursePapersView.as_view(), name="courses-papers"),
     path("popular-courses/", PopularCoursesView.as_view(), name="popular-courses"),
-    path("upload-courses/", UploaadCourseListView.as_view(), name="upload-courses"),
+    path("upload-courses/", UploadCourseListView.as_view(), name="upload-courses"),
     path(
         "popular-categories/",
         PopularCategoriesView.as_view(),

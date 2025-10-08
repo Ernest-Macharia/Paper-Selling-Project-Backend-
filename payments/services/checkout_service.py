@@ -1,5 +1,6 @@
 import logging
 
+from intasend_api.checkout import handle_intasend_checkout
 from paypal_api.checkout import handle_paypal_checkout
 from paystack.checkout import handle_paystack_checkout
 from pesapal.checkout import handle_pesapal_checkout
@@ -13,6 +14,8 @@ def handle_checkout(provider, order):
         return handle_paypal_checkout(order)
     elif provider == "stripe":
         return handle_stripe_checkout(order)
+    elif provider == "intasend":
+        return handle_intasend_checkout(order)
     elif provider == "paystack":
         return handle_paystack_checkout(order)
     elif provider == "pesapal":

@@ -31,7 +31,7 @@ ALLOWED_HOSTS = [
     "www.gradesworld.com",
     "127.0.0.1",
     "localhost",
-    "5a34ce487661.ngrok-free.app",
+    "635c3f980d99.ngrok-free.app",
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -39,7 +39,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://5a34ce487661.ngrok-free.app",
+    "https://635c3f980d99.ngrok-free.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -47,7 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://5a34ce487661.ngrok-free.app",
+    "https://635c3f980d99.ngrok-free.app",
 ]
 
 
@@ -111,6 +111,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 # Application definition
 
 INSTALLED_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -122,10 +123,12 @@ INSTALLED_APPS = [
     "mpesa_api",
     "paypal_api",
     "stripe_api",
+    "intasend_api",
     "payments",
     "communications",
     "paystack",
     "pesapal",
+    "blog",
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
@@ -298,6 +301,10 @@ STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL")
 STRIPE_ENDPOINT_SECRET = config("STRIPE_ENDPOINT_SECRET")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
+INTASEND_PUBLISHABLE_KEY = config("INTASEND_PUBLISHABLE_KEY")
+INTASEND_SECRET_KEY = config("INTASEND_SECRET_KEY")
+INTASEND_TEST_MODE = config("INTASEND_TEST_MODE")
+
 PESAPAL_API_BASE = config("PESAPAL_API_BASE")
 PESAPAL_CONSUMER_KEY = config("PESAPAL_CONSUMER_KEY")
 PESAPAL_CONSUMER_SECRET = config("PESAPAL_CONSUMER_SECRET")
@@ -307,3 +314,26 @@ PESAPAL_IPN_URL = config("PESAPAL_IPN_URL")
 AUTH0_DOMAIN = config("AUTH0_DOMAIN")
 AUTH0_API_IDENTIFIER = config("AUTH0_API_IDENTIFIER")
 AUTH0_ALGORITHMS = ["RS256"]
+
+JAZZMIN_SETTINGS = {
+    "site_title": "HQZen Admin",
+    "site_header": "HQZen Admin Dashboard",
+    "site_brand": "HQZen",
+    "welcome_sign": "Welcome to HQZen Admin Panel",
+    "copyright": "HQZen © 2025",
+    "search_model": ["auth.User", "blog.BlogPost"],
+    "show_ui_builder": True,
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "blog.BlogPost": "fas fa-newspaper",
+        "blog.Category": "fas fa-folder-open",
+        "blog.Tag": "fas fa-tags",
+    },
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "HQZen", "url": "/", "new_window": True},
+    ],
+    "order_with_respect_to": ["auth", "blog", "users"],
+}

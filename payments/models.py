@@ -13,6 +13,7 @@ class Payment(models.Model):
         ("mpesa", "Mpesa"),
         ("paystack", "Paystack"),
         ("pesapal", "PesaPal"),
+        ("intasend", "Intasend"),
     )
 
     STATUS_CHOICES = (
@@ -70,6 +71,7 @@ class WithdrawalRequest(models.Model):
         ("mpesa", "M-Pesa"),
         ("Paystack", "Paystack"),
         ("pesapal", "PesaPal"),
+        ("intasend", "Intasend"),
     )
 
     STATUS_CHOICES = (
@@ -103,6 +105,7 @@ class UserPayoutProfile(models.Model):
         ("mpesa", "M-Pesa"),
         ("Paystack", "Paystack"),
         ("pesapal", "PesaPal"),
+        ("intasend", "Intasend"),
     )
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
