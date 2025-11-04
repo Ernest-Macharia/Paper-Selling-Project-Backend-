@@ -2,6 +2,7 @@ amqp==5.3.1
 asgiref==3.8.1
 async-timeout==5.0.1
 bandit==1.8.3
+beautifulsoup4==4.13.4
 billiard==4.2.1
 black==25.1.0
 celery==5.5.3
@@ -21,6 +22,7 @@ Django==5.1.7
 django-cors-headers==4.7.0
 django-environ==0.12.0
 django-filter==25.1
+django-jazzmin==3.0.1
 djangorestframework==3.15.2
 djangorestframework_simplejwt==5.5.0
 ecdsa==0.19.1
@@ -28,6 +30,7 @@ filelock==3.18.0
 flake8==7.2.0
 identify==2.6.12
 idna==3.10
+intasend-python==1.1.2
 isort==6.0.1
 kombu==5.5.4
 markdown-it-py==3.0.0
@@ -40,6 +43,7 @@ packaging==25.0
 pathspec==0.12.1
 paypalrestsdk==1.13.3
 pbr==6.1.1
+pdf2image==1.17.0
 pillow==11.2.1
 platformdirs==4.3.8
 pre_commit==4.2.0
@@ -63,7 +67,9 @@ reportlab==4.4.2
 requests==2.32.3
 rich==14.0.0
 rsa==4.9.1
+sentry-sdk==2.34.1
 six==1.17.0
+soupsieve==2.7
 sqlparse==0.5.3
 stevedore==5.4.1
 stripe==12.1.0
@@ -74,3 +80,4 @@ urllib3==2.4.0
 vine==5.1.0
 virtualenv==20.31.2
 wcwidth==0.2.13
+python-dotenv==1.2.1

@@ -14,24 +14,32 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-import environ
 from celery.schedules import crontab
 from decouple import config
+from dotenv import load_dotenv
 
-env = environ.Env()
-environ.Env.read_env()
+# env = environ.Env()
+# environ.Env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+if os.getenv("RENDER"):
+    env_file = BASE_DIR / ".env.prod"
+else:
+    env_file = BASE_DIR / ".env.local"
+
+load_dotenv(dotenv_path=env_file)
 
 BASE_URL = config("BASE_URL", default="http://localhost:8000")
 
 ALLOWED_HOSTS = [
     "gradesworld.com",
     "www.gradesworld.com",
+    "gradesworld.onrender.com",
     "127.0.0.1",
     "localhost",
-    "635c3f980d99.ngrok-free.app",
+    "7308108ac91a.ngrok-free.app",
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -39,7 +47,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://635c3f980d99.ngrok-free.app",
+    "https://7308108ac91a.ngrok-free.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -47,7 +55,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.gradesworld.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
-    "https://635c3f980d99.ngrok-free.app",
+    "https://7308108ac91a.ngrok-free.app",
 ]
 
 
@@ -167,6 +175,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -241,7 +250,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # for collectstatic
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
@@ -304,6 +316,7 @@ STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 INTASEND_PUBLISHABLE_KEY = config("INTASEND_PUBLISHABLE_KEY")
 INTASEND_SECRET_KEY = config("INTASEND_SECRET_KEY")
 INTASEND_TEST_MODE = config("INTASEND_TEST_MODE")
+INTASEND_WEBHOOK_CHALLENGE = config("INTASEND_WEBHOOK_CHALLENGE")
 
 PESAPAL_API_BASE = config("PESAPAL_API_BASE")
 PESAPAL_CONSUMER_KEY = config("PESAPAL_CONSUMER_KEY")
