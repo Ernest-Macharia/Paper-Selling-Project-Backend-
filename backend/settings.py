@@ -46,6 +46,7 @@ ALLOWED_HOSTS = [
 CORS_ALLOWED_ORIGINS = [
     "https://gradesworld.com",
     "https://www.gradesworld.com",
+    "https://gradesworld.onrender.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
     "https://7308108ac91a.ngrok-free.app",
@@ -54,6 +55,7 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = [
     "https://gradesworld.com",
     "https://www.gradesworld.com",
+    "https://gradesworld.onrender.com",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
     "https://7308108ac91a.ngrok-free.app",
@@ -263,6 +265,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # for collectstatic
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+if os.getenv("RENDER"):
+    # Production
+    DEBUG = False
+    STATIC_URL = "/static/"
+    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+else:
+    # Local development
+    DEBUG = True
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 
 # Default primary key field type
