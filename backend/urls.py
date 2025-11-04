@@ -18,11 +18,25 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+
+def index(request):
+    return JsonResponse({"message": "Welcome to GradesWorld API"})
+
+
+def health_check(request):
+    return JsonResponse(
+        {"status": "healthy", "message": "GradesWorld backend is running smoothly"}
+    )
+
+
 urlpatterns = [
+    path("", index),
     path("admin/", admin.site.urls),
+    path("health/", health_check),
     path("api/users/", include("users.urls")),
     path("api/exampapers/", include("exampapers.urls")),
     path("api/blog/", include("blog.urls")),
